@@ -1,0 +1,99 @@
+﻿@page "/login"
+@using Domain.Constants
+
+<div class="d-flex justify-center">
+	<MudPaper Class="pa-4" Style="max-width: 400px; width: 100%;">
+		<MudText Typo=@Typo.h4
+				 Align=@Align.Center
+				 Class="mb-4">
+			Sign in
+		</MudText>
+
+		<MudText Align=@Align.Center Class="mb-4">
+			or <MudLink Href="/register">create an account</MudLink>
+		</MudText>
+
+@* 		<MudForm Model=@loginModel
+				 Validation=@loginModelValidation.ValidateValue
+				 @ref=@loginForm>
+			<MudTextField Label="Email"
+						  @bind-Value=@loginModel.Login
+						  For="@(() => loginModel.Login)"
+						  Variant=@Variant.Outlined
+						  Class="mb-3"
+						  FullWidth=@true
+						  Required=@true />
+
+			<MudTextField Label="Password"
+						  @bind-Value=@loginModel.Password
+						  For="@(() => loginModel.Password)"
+						  Variant=@Variant.Outlined
+						  Class="mb-3"
+						  FullWidth=@true
+						  InputType=@InputType.Password
+						  Required=@true />
+
+			<MudCheckBox Label="Remember me"
+						 @bind-Checked=@rememberMe
+						 T=@bool
+						 Class="mb-3" />
+
+			<MudButton FullWidth=@true
+					   ButtonType=@ButtonType.Button
+					   Variant=@Variant.Filled
+					   Color=@Color.Primary
+					   Size=@Size.Large
+					   OnClick=@HandleLogin
+					   Disabled=@isSubmitting
+					   Class="mb-3">
+				@if (isSubmitting)
+				{
+					<MudProgressCircular Size=@Size.Small
+										 Indeterminate=@true />
+				}
+				else
+				{
+					<text>Sign in</text>
+				}
+			</MudButton>
+
+			<MudButton FullWidth=@true
+					   ButtonType=@ButtonType.Button
+					   Variant=@Variant.Outlined
+					   Color=@Color.Default
+					   Size=@Size.Large
+					   OnClick=@(() => HandleExternalLogin(ExternalLoginConstants.Google))
+					   Class="mb-3"
+					   StartIcon=@Icons.Custom.Brands.Google>
+				Sign in with Google
+			</MudButton>
+
+			<MudButton FullWidth=@true
+					   ButtonType=@ButtonType.Button
+					   Variant=@Variant.Outlined
+					   Color=@Color.Default
+					   Size=@Size.Large
+					   OnClick=@(() => HandleExternalLogin(ExternalLoginConstants.Microsoft))
+					   Class="mb-3"
+					   StartIcon=@Icons.Custom.Brands.Microsoft>
+				Sign in with Microsoft
+			</MudButton>
+
+			<div class="d-flex justify-center mt-3">
+				<MudLink Href="/forgot-password">
+					Forgotten your password?
+				</MudLink>
+			</div>
+
+			@if (!string.IsNullOrEmpty(errorMessage))
+			{
+				<MudAlert Severity=@Severity.Error
+						  Dense=@true
+						  Elevation="0"
+						  Class="mt-4">
+					@errorMessage
+				</MudAlert>
+			}
+		</MudForm>
+ *@	</MudPaper>
+</div>

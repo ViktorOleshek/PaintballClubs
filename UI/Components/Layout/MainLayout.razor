@@ -1,0 +1,122 @@
+﻿@using Domain.Entities
+@using Microsoft.AspNetCore.Components.Authorization
+@using Services.ExternalApi.Facade
+@using UI.Extensions
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="page">
+	<div class="sidebar">
+		<NavMenu />
+	</div>
+
+	<main>
+		<div class="top-row px-4">
+			<a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+
+			@if (!isAuthenticated)
+			{
+				<MudButton Href="/login"
+						   Color=@Color.Primary
+						   Variant=@Variant.Filled
+						   Class="ml-2">
+					Sign In
+				</MudButton>
+			}
+			else
+			{
+				<MudMenu Icon=@Icons.Material.Filled.AccountCircle
+						 Color=@Color.Primary
+						 AriaLabel="Open user menu">
+					<ActivatorContent>
+						<MudText>
+							@user.login
+							@position.position_name
+						</MudText>
+					</ActivatorContent>
+
+					<ChildContent>
+						<MudMenuItem Label="Logout"
+									 Href="/logout" />
+					</ChildContent>
+				</MudMenu>
+			}
+		</div>
+
+		<article class="content px-4">
+			@Body
+		</article>
+	</main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+	An unhandled error has occurred.
+	<a href="." class="reload">Reload</a>
+	<span class="dismiss">🗙</span>
+</div>
+
+@code {
+	private bool isAuthenticated;
+	private User user = new();
+	private Employee employee = new();
+	private Domain.Entities.Position position = new();
+
+	[Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+	[Inject] private IApiFacade ApiFacade { get; set; } = default!;
+	[Inject] private ISnackbar Snackbar { get; set; } = default!;
+	[Inject] private NavigationManager NavigationManager { get; set; } = default!;
+	[Inject] private IDialogService DialogService { get; set; } = default!;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+
+		if (!isAuthenticated) return;
+
+		if (AuthenticationStateProvider is not CustomAuthStateProvider customProvider)
+		{
+			Snackbar.Add("Authentication provider is not valid.", Severity.Error);
+			return;
+		}
+
+		var userId = await customProvider.LoadUserIdFromToken();
+		if (userId is null)
+		{
+			Snackbar.Add("User ID not found in token.", Severity.Error);
+			return;
+		}
+
+		await LoadUser(userId.Value);
+	}
+	private async Task LoadUser(int userId)
+	{
+		var userResponse = await ApiFacade.AdminApiService.Get(userId);
+		if (!userResponse.IsSuccessStatusCode)
+		{
+			Snackbar.Add("Failed to load user.", Severity.Error);
+			return;
+		}
+		user = userResponse.Content;
+
+		var employeeResponse = await ApiFacade.EmployeeApiService.Get(user.employee_id);
+		if (!employeeResponse.IsSuccessStatusCode)
+		{
+			Snackbar.Add("Failed to load employee.", Severity.Error);
+			return;
+		}
+		employee = employeeResponse.Content;
+
+		var positionResponse = await ApiFacade.PositionApiService.Get(employee.position_id);
+		if (!positionResponse.IsSuccessStatusCode)
+		{
+			Snackbar.Add("Failed to load position.", Severity.Error);
+			return;
+		}
+		position = positionResponse.Content;
+	}
+}

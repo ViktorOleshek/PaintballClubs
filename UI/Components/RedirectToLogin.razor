@@ -1,0 +1,19 @@
+﻿@using System.Net
+@inject NavigationManager Navigation
+
+@code {
+	protected override void OnInitialized()
+	{
+		var currentUri = Navigation.Uri;
+		var relativeUri = Navigation.ToBaseRelativePath(currentUri);
+
+		if (!relativeUri.StartsWith("/"))
+		{
+			relativeUri = "/" + relativeUri;
+		}
+
+		var encodedReturnUrl = WebUtility.UrlEncode(relativeUri);
+
+		Navigation.NavigateTo($"/login?returnUrl={encodedReturnUrl}");
+	}
+}

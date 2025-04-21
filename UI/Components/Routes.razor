@@ -1,0 +1,23 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using UI.Components.Pages.NotFound
+
+<CascadingAuthenticationState>
+	<Router AppAssembly="@typeof(Program).Assembly">
+		<Found Context="routeData">
+			<AuthorizeRouteView RouteData="@routeData" DefaultLayout="typeof(Layout.MainLayout)">
+				<NotAuthorized>
+					<RedirectToLogin />
+				</NotAuthorized>
+
+				<Authorizing>
+					<h1>Authentication in progress</h1>
+					<p>Only visible while authentication is in progress.</p>
+				</Authorizing>
+			</AuthorizeRouteView>
+		</Found>
+
+		<NotFound>
+			<NotFoundPage />
+		</NotFound>
+	</Router>
+</CascadingAuthenticationState>
