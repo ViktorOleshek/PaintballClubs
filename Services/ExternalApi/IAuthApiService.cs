@@ -6,5 +6,5 @@ namespace Services.ExternalApi;
 public interface IAuthApiService
 {
     [Post("/auth")]
-    Task<IApiResponse<AuthResponse>> Auth([Body] AuthRequest request);
+    Task<IApiResponse<LoginResponse>> Auth([Body] LoginModel request);
 }

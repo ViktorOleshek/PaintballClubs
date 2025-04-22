@@ -16,8 +16,6 @@
 
 	<main>
 		<div class="top-row px-4">
-			<a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-
 			@if (!isAuthenticated)
 			{
 				<MudButton Href="/login"
@@ -33,12 +31,20 @@
 						 Color=@Color.Primary
 						 AriaLabel="Open user menu">
 					<ActivatorContent>
-						<MudText>
-							@user.login
-							@position.position_name
-						</MudText>
+						<div class="d-flex align-center">
+							<MudAvatar Color="Color.Secondary" Class="mr-2">
+								@(employee.first_name?.FirstOrDefault() ?? '?')@(employee.last_name?.FirstOrDefault() ?? '?')
+							</MudAvatar>
+							<div>
+								<MudText Typo="Typo.body1" Color="Color.Tertiary">
+									@(employee.last_name) @(employee.first_name)
+								</MudText>
+								<MudText Typo="Typo.caption" Style="font-style: italic;" Color="Color.Tertiary">
+									@position.position_name
+								</MudText>
+							</div>
+						</div>
 					</ActivatorContent>
-
 					<ChildContent>
 						<MudMenuItem Label="Logout"
 									 Href="/logout" />
@@ -58,6 +64,18 @@
 	<a href="." class="reload">Reload</a>
 	<span class="dismiss">🗙</span>
 </div>
+
+<style>
+	.top-row {
+		background-color: #d1e6e7;
+		padding: 0.5rem;
+	}
+
+		.top-row .mud-menu {
+			display: flex;
+			align-items: center;
+		}
+</style>
 
 @code {
 	private bool isAuthenticated;
