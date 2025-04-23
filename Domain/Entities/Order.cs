@@ -22,7 +22,7 @@ public class Order
 
     public int? client_id { get; set; }
 
-    public int? employee_id { get; set; }
+    public int employee_id { get; set; }
 
     public int offer_id { get; set; }
 

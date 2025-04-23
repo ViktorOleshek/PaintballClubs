@@ -1,0 +1,166 @@
+﻿@page "/orders"
+@using Domain.Entities
+@using Services.ExternalApi.Facade
+@inject IApiFacade ApiFacade
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+	<MudGrid>
+		<MudItem xs="12" Class="d-flex justify-space-between align-center">
+			<MudText Typo="Typo.h4">Orders</MudText>
+			<MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.Add" OnClick="CreateNewOrder">CREATE NEW ORDER</MudButton>
+		</MudItem>
+
+		<MudItem xs="12">
+			<MudTextField @bind-Value="searchQuery" Label="Search by Number" Variant="Variant.Outlined" Class="mb-4" />
+		</MudItem>
+
+		<MudItem xs="12">
+			<MudGrid>
+				@foreach (var order in FilteredOrders)
+				{
+					<MudItem xs="12" sm="6" md="4">
+						<MudCard Elevation="3" Class="mb-4">
+							<MudCardHeader>
+								<CardHeaderContent>
+									<MudText Typo="Typo.h6">Order #@order.OrderNumber</MudText>
+								</CardHeaderContent>
+								<CardHeaderActions>
+									@switch (order.StatusName)
+									{
+										case "Completed":
+											<MudChip T="string" Color="Color.Primary" Size="Size.Small">Completed</MudChip>
+											break;
+										case "Failed":
+											<MudChip T="string" Color="Color.Error" Size="Size.Small">Failed</MudChip>
+											break;
+										case "Cancelled":
+											<MudChip T="string" Color="Color.Warning" Size="Size.Small">Cancelled</MudChip>
+											break;
+										case "Pending":
+											<MudChip T="string" Color="Color.Success" Size="Size.Small">Pending</MudChip>
+											break;
+										default:
+											<MudChip T="string" Color="Color.Default" Size="Size.Small">@order.StatusName</MudChip>
+											break;
+									}
+								</CardHeaderActions>
+							</MudCardHeader>
+							<MudCardContent>
+								<MudText><b>Club:</b> @order.ClubName</MudText>
+								<MudText><b>Employee:</b> @order.EmployeeName</MudText>
+								<MudText><b>Club offer:</b> @order.ClubOffers</MudText>
+								<MudText><b>Order Date:</b> @order.OrderDate.ToString("yyyy-MM-dd HH:mm")</MudText>
+								<MudText><b>Event Date:</b> @order.EventDate.ToString("yyyy-MM-dd HH:mm")</MudText>
+							</MudCardContent>
+							<MudCardActions>
+								<MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => EditOrder(order.OrderId))" />
+								<MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteOrder(order.OrderId))" />
+							</MudCardActions>
+						</MudCard>
+					</MudItem>
+				}
+			</MudGrid>
+		</MudItem>
+	</MudGrid>
+</MudContainer>
+
+@code {
+	private string searchQuery = "";
+	private List<OrderViewModel> Orders = new();
+	private List<Employee> employees = new();
+	private List<Club> clubs = new();
+	private List<ClubOffer> offers = new();
+	private List<Match> matches = new();
+	private List<OrderStatus> statuses = new();
+
+	private IEnumerable<OrderViewModel> FilteredOrders =>
+		string.IsNullOrWhiteSpace(searchQuery)
+			? Orders
+			: Orders.Where(o => o.OrderNumber.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadOrders();
+	}
+
+	private async Task LoadOrders()
+	{
+		var ordersResponse = await ApiFacade.OrdersApiService.Get();
+		var statusesResponse = await ApiFacade.OrderStatusApiService.Get();
+		var employeesResponse = await ApiFacade.EmployeeApiService.Get();
+		var clubsResponse = await ApiFacade.ClubApiService.Get();
+		var offersResponse = await ApiFacade.ClubOffersApiService.Get();
+		var matchesResponse = await ApiFacade.MatchApiService.Get();
+
+		if (!ordersResponse.IsSuccessStatusCode) return;
+
+		var orders = ordersResponse.Content;
+		statuses = statusesResponse.Content.ToList();
+		employees = employeesResponse.Content.ToList();
+		clubs = clubsResponse.Content.ToList();
+		offers = offersResponse.Content.ToList();
+		matches = matchesResponse.Content.ToList();
+
+		Orders = orders.Select(o => new OrderViewModel
+			{
+				OrderId = o.order_id,
+				OrderNumber = o.order_number,
+				OrderDate = o.order_time ?? DateTime.Now,
+				EventDate = o.event_date ?? DateTime.Now.AddDays(20),
+				StatusName = statuses.FirstOrDefault(s => s.status_id == o.status_id)?.status_name ?? "Unknown",
+				ClubName = GetClubName(o),
+				EmployeeName = GetEmployeeName(o),
+				ClubOffers = GetMatchType(o)
+			}).ToList();
+	}
+
+
+	private string GetClubName(Order order)
+	{
+		var employee = employees.FirstOrDefault(e => e.employee_id == order.employee_id);
+		var club = clubs.FirstOrDefault(c => c.club_id == employee?.club_id);
+		return club?.name ?? "Unknown Club";
+	}
+
+	private string GetEmployeeName(Order order)
+	{
+		var employee = employees.FirstOrDefault(e => e.employee_id == order.employee_id);
+		return employee != null ? $"{employee.first_name} {employee.last_name}" : "Unknown Manager";
+	}
+
+	private string GetMatchType(Order order)
+	{
+		var offer = offers.FirstOrDefault(o => o.offer_id == order.offer_id);
+		return offer?.name ?? "Unknown Match";
+	}
+
+	private void CreateNewOrder()
+	{
+		NavigationManager.NavigateTo("/orders/create");
+	}
+
+	private void EditOrder(int orderId)
+	{
+		NavigationManager.NavigateTo($"/orders/edit/{orderId}");
+	}
+
+	private async Task DeleteOrder(int orderId)
+	{
+		// TODO: Додати підтвердження видалення
+		await ApiFacade.OrdersApiService.Delete(orderId);
+		await LoadOrders();
+	}
+
+	public class OrderViewModel
+	{
+		public int OrderId { get; set; }
+		public string OrderNumber { get; set; } = "";
+		public DateTime OrderDate { get; set; }
+		public DateTime EventDate { get; set; }
+		public string StatusName { get; set; } = "";
+		public string ClubName { get; set; } = "";
+		public string EmployeeName { get; set; } = "";
+		public string ClubOffers { get; set; } = "";
+	}
+}
