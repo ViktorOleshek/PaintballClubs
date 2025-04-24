@@ -1,0 +1,78 @@
+﻿<div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <span>Showing @((CurrentPage - 1) * PageSize + 1) to @Math.Min(CurrentPage * PageSize, TotalItems) of @TotalItems entries</span>
+    </div>
+    <div>
+        <select class="form-select form-select-sm d-inline-block me-2" style="width: auto;" @bind="selectedPageSize">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+        </select>
+        <ul class="pagination pagination-sm d-inline-flex mb-0">
+            <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                <button class="page-link" @onclick="() => OnPageClicked(1)" disabled="@(CurrentPage == 1)">First</button>
+            </li>
+            <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                <button class="page-link" @onclick="() => OnPageClicked(CurrentPage - 1)" disabled="@(CurrentPage == 1)">Previous</button>
+            </li>
+
+            @for (int i = Math.Max(1, CurrentPage - 2); i <= Math.Min(TotalPages, CurrentPage + 2); i++)
+            {
+                int pageNumber = i;
+                <li class="page-item @(CurrentPage == pageNumber ? "active" : "")">
+                    <button class="page-link" @onclick="() => OnPageClicked(pageNumber)">@pageNumber</button>
+                </li>
+            }
+
+            <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                <button class="page-link" @onclick="() => OnPageClicked(CurrentPage + 1)" disabled="@(CurrentPage == TotalPages)">Next</button>
+            </li>
+            <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                <button class="page-link" @onclick="() => OnPageClicked(TotalPages)" disabled="@(CurrentPage == TotalPages)">Last</button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public int PageSize { get; set; } = 10;
+
+    [Parameter]
+    public int TotalItems { get; set; }
+
+    [Parameter]
+    public int TotalPages { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageSizeChanged { get; set; }
+
+    private int selectedPageSize
+    {
+        get => PageSize;
+        set
+        {
+            if (PageSize != value)
+            {
+                PageSize = value;
+                OnPageSizeChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    private async Task OnPageClicked(int page)
+    {
+        if (page < 1 || page > TotalPages)
+            return;
+
+        CurrentPage = page;
+        await OnPageChanged.InvokeAsync(page);
+    }
+}

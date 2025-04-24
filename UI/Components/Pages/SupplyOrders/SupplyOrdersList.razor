@@ -1,7 +1,9 @@
 ﻿@page "/supply-orders"
+@using Domain.Constants
 @using Domain.Entities
 @using System.Collections.Generic
 @using Services.ExternalApi.Facade
+@using UI.Components.Pages.SupplyOrders.Component
 @inject IApiFacade ApiFacade
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
@@ -141,58 +143,14 @@
 						<td @onclick="() => BeginEdit(order, nameof(order.SuppliedEquipmentItems))">
 							@if (editingOrder?.SupplyOrderId == order.SupplyOrderId && editingField == nameof(order.SuppliedEquipmentItems))
 							{
-								<div class="equipment-editor p-2" style="position: fixed;" @onclick:stopPropagation="true">
-									<div class="equipment-items-container">
-										@foreach (var item in order.SuppliedEquipmentItems)
-										{
-											var equipment = equipmentList.FirstOrDefault(e => e.equipment_id == item.EquipmentId);
-											var equipmentName = equipment != null ? equipment.name : "Unknown Equipment";
-											var totalPriceForItem = item.Quantity * item.Price;
-
-											<div class="equipment-item mb-2 p-2 border rounded">
-												<div class="d-flex justify-content-between align-items-center mb-2">
-													<div class="equipment-name">
-														<span class="fw-bold">@equipmentName</span>
-													</div>
-													<button class="btn btn-sm btn-danger" @onclick="() => RemoveEquipmentItem(order, item)">×</button>
-												</div>
-
-												<div class="d-flex">
-													<div class="me-2">
-														<label>Quantity</label>
-														<input type="number" class="form-control" @bind="item.Quantity" min="1" />
-													</div>
-													<div class="me-2">
-														<label>Price (per unit)</label>
-														<input type="number" class="form-control" @bind="item.Price" step="0.01" min="0" />
-													</div>
-													<div>
-														<label>Total</label>
-														<div class="form-control bg-light" readonly>@totalPriceForItem.ToString("0.00")</div>
-													</div>
-												</div>
-											</div>
-										}
-									</div>
-
-									<!-- Загальна сума -->
-									<div class="text-end fw-bold mt-3 me-1">
-										Total Order Price: @order.SuppliedEquipmentItems.Sum(i => i.Quantity * i.Price).ToString("0.00")
-									</div>
-
-									<!-- Кнопки -->
-									<div class="buttons-container" style="position: sticky; bottom: 0; background-color: white; padding-top: 10px; border-top: 1px solid #ddd;">
-										<button class="btn btn-sm btn-outline-primary" @onclick="() => AddEquipmentItem(order)">Add Equipment</button>
-										<div class="mt-2 d-flex justify-content-end">
-											<button class="btn btn-primary btn-sm" @onclick="() => SaveEquipmentChanges(order)">Save</button>
-											<button class="btn btn-secondary btn-sm ms-2" @onclick="() => CancelEdit()">Close</button>
-										</div>
-									</div>
-								</div>
+								<SuppliedEquipmentEditor SuppliedEquipmentItems="order.SuppliedEquipmentItems"
+														 EquipmentList="equipmentList"
+														 OnSaveChanges="() => SaveEquipmentChanges(order)"
+														 OnCancel="CancelEdit" />
 							}
 							else
 							{
-								<button class="btn btn-sm btn-outline-secondary" @onclick="async (e) => await ShowEquipmentMenu(e, order)">
+								<button class="btn btn-sm btn-outline-secondary" @onclick="() => BeginEdit(order, nameof(order.SuppliedEquipmentItems))">
 									View (@order.SuppliedEquipmentItems.Count items)
 								</button>
 							}
@@ -212,42 +170,12 @@
 	</div>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mt-3">
-	<div>
-		<span>Showing @((currentPage - 1) * pageSize + 1) to @Math.Min(currentPage * pageSize, FilteredOrders.Count()) of @FilteredOrders.Count() entries</span>
-	</div>
-	<div>
-		<select class="form-select form-select-sm d-inline-block me-2" style="width: auto;" @bind="pageSize">
-			<option value="5">5</option>
-			<option value="10">10</option>
-			<option value="25">25</option>
-			<option value="50">50</option>
-		</select>
-		<ul class="pagination pagination-sm d-inline-flex mb-0">
-			<li class="page-item @(currentPage == 1 ? "disabled" : "")">
-				<button class="page-link" @onclick="() => GoToPage(1)" disabled="@(currentPage == 1)">First</button>
-			</li>
-			<li class="page-item @(currentPage == 1 ? "disabled" : "")">
-				<button class="page-link" @onclick="() => GoToPage(currentPage - 1)" disabled="@(currentPage == 1)">Previous</button>
-			</li>
-
-			@for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(TotalPages, currentPage + 2); i++)
-			{
-				int pageNumber = i;
-				<li class="page-item @(currentPage == pageNumber ? "active" : "")">
-					<button class="page-link" @onclick="() => GoToPage(pageNumber)">@pageNumber</button>
-				</li>
-			}
-
-			<li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
-				<button class="page-link" @onclick="() => GoToPage(currentPage + 1)" disabled="@(currentPage == TotalPages)">Next</button>
-			</li>
-			<li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
-				<button class="page-link" @onclick="() => GoToPage(TotalPages)" disabled="@(currentPage == TotalPages)">Last</button>
-			</li>
-		</ul>
-	</div>
-</div>
+<PaginationControl CurrentPage="currentPage"
+				   PageSize="pageSize"
+				   TotalItems="FilteredOrders.Count()"
+				   TotalPages="TotalPages"
+				   OnPageChanged="GoToPage"
+				   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
 
 @code {
 	private string searchQuery = "";
@@ -267,10 +195,6 @@
 	private string newEmployeeFirstName = "";
 	private string newEmployeeLastName = "";
 	private string newEquipmentName = "";
-
-	// Equipment menu positioning
-	private string equipmentMenuPositionX = "0px";
-	private string equipmentMenuPositionY = "0px";
 
 	// Pagination parameters
 	private int currentPage = 1;
@@ -372,11 +296,11 @@
 	{
 		return statusName.ToLower() switch
 		{
-			"pending" => "badge bg-warning text-dark",
-			"approved" => "badge bg-info text-dark",
-			"ordered" => "badge bg-primary",
-			"delivered" => "badge bg-success",
-			"cancelled" => "badge bg-danger",
+			SupplyOrderStatuses.Pending => "badge bg-warning text-dark",
+			SupplyOrderStatuses.Confirmed => "badge bg-info text-dark",
+			SupplyOrderStatuses.Processing => "badge bg-primary",
+			SupplyOrderStatuses.Completed => "badge bg-success",
+			SupplyOrderStatuses.Cancelled => "badge bg-danger",
 			_ => "badge bg-secondary"
 		};
 	}
@@ -385,13 +309,6 @@
 	{
 		editingOrder = order;
 		editingField = field;
-	}
-
-	private async Task ShowEquipmentMenu(MouseEventArgs e, SupplyOrderViewModel order)
-	{
-		// Set the position of the equipment menu based on the mouse position
-		// await JSRuntime.InvokeVoidAsync("showEquipmentMenuAtPosition", e.ClientX, e.ClientY);
-		BeginEdit(order, nameof(order.SuppliedEquipmentItems));
 	}
 
 	private async Task EndEdit()
@@ -515,32 +432,6 @@
 		newEmployeeLastName = "";
 	}
 
-	private async Task AddNewEquipment(SuppliedEquipmentViewModel item)
-	{
-		if (string.IsNullOrWhiteSpace(newEquipmentName)) return;
-
-		var newEquipment = new Equipment
-			{
-				name = newEquipmentName,
-				CreateDatetime = DateTime.Now,
-				UpdateDatetime = DateTime.Now
-			};
-
-		var response = await ApiFacade.EquipmentApiService.Create(newEquipment);
-		if (response.IsSuccessStatusCode)
-		{
-			await LoadData();
-			var createdEquipment = equipmentList.FirstOrDefault(e => e.name == newEquipmentName);
-			if (createdEquipment != null)
-			{
-				item.EquipmentId = createdEquipment.equipment_id;
-				item.EquipmentName = createdEquipment.name;
-			}
-		}
-
-		newEquipmentName = "";
-	}
-
 	private async Task SaveChanges(SupplyOrderViewModel order)
 	{
 		var supplyOrder = new SupplyOrder
@@ -556,25 +447,6 @@
 
 		await ApiFacade.SupplyOrdersApiService.Update(supplyOrder.supply_order_id, supplyOrder);
 		await LoadData();
-	}
-
-	private void AddEquipmentItem(SupplyOrderViewModel order)
-	{
-		var newItem = new SuppliedEquipmentViewModel
-			{
-				SupplyOrderId = order.SupplyOrderId,
-				EquipmentId = equipmentList.FirstOrDefault()?.equipment_id ?? 0,
-				EquipmentName = equipmentList.FirstOrDefault()?.name ?? "",
-				Quantity = 1,
-				Price = 0
-			};
-
-		order.SuppliedEquipmentItems.Add(newItem);
-	}
-
-	private void RemoveEquipmentItem(SupplyOrderViewModel order, SuppliedEquipmentViewModel item)
-	{
-		order.SuppliedEquipmentItems.Remove(item);
 	}
 
 	private async Task SaveEquipmentChanges(SupplyOrderViewModel order)
