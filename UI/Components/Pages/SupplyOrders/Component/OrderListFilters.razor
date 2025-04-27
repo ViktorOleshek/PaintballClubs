@@ -1,0 +1,97 @@
+﻿@using Domain.Entities
+@using MudBlazor
+@inherits OwningComponentBase
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="3">
+        <MudTextField @bind-Value="SearchQuery" Label="Search" Icon="@Icons.Material.Filled.Search" />
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudSelect T="int" Label="Status" @bind-Value="StatusFilter">
+            <MudSelectItem T="int" Value="0">All</MudSelectItem>
+            @foreach (var status in Statuses)
+            {
+                <MudSelectItem T="int" Value="@status.status_id">@status.status_name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudSelect T="int" Label="Supplier" @bind-Value="SupplierFilter">
+            <MudSelectItem T="int" Value="0">All</MudSelectItem>
+            @foreach (var supplier in Suppliers)
+            {
+                <MudSelectItem T="int" Value="@supplier.supplier_id">@supplier.name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudSelect T="int" Label="Employee" @bind-Value="EmployeeFilter">
+            <MudSelectItem T="int" Value="0">All</MudSelectItem>
+            @foreach (var employee in Employees)
+            {
+                <MudSelectItem T="int" Value="@employee.employee_id">@employee.first_name @employee.last_name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudDatePicker @bind-Date="DateFromFilter" Label="From Date" />
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudDatePicker @bind-Date="DateToFilter" Label="To Date" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public string SearchQuery { get; set; }
+    [Parameter] public int StatusFilter { get; set; }
+    [Parameter] public int SupplierFilter { get; set; }
+    [Parameter] public int EmployeeFilter { get; set; }
+    [Parameter] public DateTime? DateFromFilter { get; set; }
+    [Parameter] public DateTime? DateToFilter { get; set; }
+
+    [Parameter] public EventCallback<string> OnSearchChanged { get; set; }
+    [Parameter] public EventCallback<int> OnStatusFilterChanged { get; set; }
+    [Parameter] public EventCallback<int> OnSupplierFilterChanged { get; set; }
+    [Parameter] public EventCallback<int> OnEmployeeFilterChanged { get; set; }
+    [Parameter] public EventCallback<DateTime?> OnDateFromFilterChanged { get; set; }
+    [Parameter] public EventCallback<DateTime?> OnDateToFilterChanged { get; set; }
+
+    [Parameter] public List<Supplier> Suppliers { get; set; }
+    [Parameter] public List<SupplyOrderStatus> Statuses { get; set; }
+    [Parameter] public List<Employee> Employees { get; set; }
+
+    private void HandleSearchChanged()
+    {
+        OnSearchChanged.InvokeAsync(SearchQuery);
+    }
+
+    private void HandleStatusFilterChanged()
+    {
+        OnStatusFilterChanged.InvokeAsync(StatusFilter);
+    }
+
+    private void HandleSupplierFilterChanged()
+    {
+        OnSupplierFilterChanged.InvokeAsync(SupplierFilter);
+    }
+
+    private void HandleEmployeeFilterChanged()
+    {
+        OnEmployeeFilterChanged.InvokeAsync(EmployeeFilter);
+    }
+
+    private void HandleDateFromFilterChanged()
+    {
+        OnDateFromFilterChanged.InvokeAsync(DateFromFilter);
+    }
+
+    private void HandleDateToFilterChanged()
+    {
+        OnDateToFilterChanged.InvokeAsync(DateToFilter);
+    }
+}

@@ -1,327 +1,648 @@
 ﻿@using Domain.Entities
 @using static UI.Components.Pages.SupplyOrders.SupplyOrdersList
 @inject Services.ExternalApi.Facade.IApiFacade ApiFacade
+@inject MudBlazor.ISnackbar Snackbar
 
 <div class="order-details-panel">
-    <div class="order-details-header">
-        <h4>Order #@Order.SupplyOrderNumber Details</h4>
-        <button type="button" class="btn-close" @onclick="OnClose"></button>
-    </div>
+	<div class="order-details-header">
+		<h4>Order #@Order.SupplyOrderNumber Details</h4>
+		<button type="button" class="btn-close position-fixed top-0 end-0 m-3" @onclick="OnClose"></button>
+	</div>
 
-    <div class="order-details-body">
-        <div class="row g-2">
-            <!-- First row with 2 cards in one row -->
-            <div class="col-md-4">
-                <div class="card card-compact mb-2">
-                    <div class="card-header bg-info text-white py-1">
-                        <h6 class="mb-0">Supplier Information</h6>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="row g-1">
-                            <div class="col-md-12 mb-1">
-                                <label class="form-label-sm mb-0">Supplier</label>
-                                <select class="form-select form-select-sm" @bind="Order.SupplierId">
-                                    @foreach (var supplier in Suppliers)
-                                    {
-                                        <option value="@supplier.supplier_id">@supplier.name</option>
-                                    }
-                                </select>
-                            </div>
-                            @if (selectedSupplier != null)
-                            {
-                                <div class="col-md-12 mb-1">
-                                    <label class="form-label-sm mb-0">Contact</label>
-                                    <div class="d-flex">
-                                        <span class="badge bg-light text-dark me-1">@selectedSupplier.phone_number</span>
-                                        <span class="badge bg-light text-dark">@selectedSupplier.email</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label-sm mb-0">Address</label>
-                                    <p class="small mb-0 text-muted">@selectedSupplier.address</p>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
+	<div class="order-details-body">
+		<EditForm Model="@Order" OnValidSubmit="SaveChanges">
+			<DataAnnotationsValidator />
+			<ValidationSummary />
 
-            <div class="col-md-4">
-                <div class="card card-compact mb-2">
-                    <div class="card-header bg-success text-white py-1">
-                        <h6 class="mb-0">Employee Information</h6>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="row g-1">
-                            <div class="col-md-12 mb-1">
-                                <label class="form-label-sm mb-0">Employee</label>
-                                <select class="form-select form-select-sm" @bind="Order.EmployeeId">
-                                    @foreach (var employee in Employees)
-                                    {
-                                        <option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
-                                    }
-                                </select>
-                            </div>
-                            @if (selectedEmployee != null)
-                            {
-                                <div class="col-md-6 mb-1">
-                                    <label class="form-label-sm mb-0">Position</label>
-                                    <span class="badge bg-light text-dark">@GetPositionName(selectedEmployee.position_id)</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+			<div class="row g-2">
+				<!-- First row with cards -->
+				<div class="col-md-4">
+					<div class="card card-compact mb-2">
+						<div class="card-header bg-info text-white py-1">
+							<h6 class="mb-0">Supplier Information</h6>
+						</div>
+						<div class="card-body p-2">
+							<div class="row g-1">
+								<div class="col-md-12 mb-1">
+									<label class="form-label-sm mb-0">Supplier</label>
+									<InputSelect class="form-select form-select-sm" @bind-Value="Order.SupplierId">
+										@foreach (var supplier in Suppliers)
+										{
+											<option value="@supplier.supplier_id">@supplier.name</option>
+										}
+									</InputSelect>
+									<ValidationMessage For="@(() => Order.SupplierId)" />
+								</div>
+								@if (selectedSupplier != null)
+								{
+									<div class="col-md-12 mb-1">
+										<label class="form-label-sm mb-0">Contact</label>
+										<div class="d-flex">
+											@if (!string.IsNullOrEmpty(selectedSupplier.phone_number))
+											{
+												<span class="badge bg-light text-dark me-1">📞 @selectedSupplier.phone_number</span>
+											}
+											@if (!string.IsNullOrEmpty(selectedSupplier.email))
+											{
+												<span class="badge bg-light text-dark">✉️ @selectedSupplier.email</span>
+											}
+										</div>
+									</div>
+									<div class="col-md-12">
+										<label class="form-label-sm mb-0">Address</label>
+										<p class="small mb-0 text-muted">@(string.IsNullOrEmpty(selectedSupplier.address) ? "No address provided" : selectedSupplier.address)</p>
+									</div>
+								}
+							</div>
+						</div>
+					</div>
+				</div>
 
-        <!-- Product Placements -->
-        <div class="card card-compact mb-2">
-            <div class="card-header bg-warning text-dark py-1 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Product Placements</h6>
-                <button class="btn btn-sm btn-link p-0 text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#placementCollapse">
-                    <i class="bi bi-chevron-down"></i>
-                </button>
-            </div>
-            <div class="collapse" id="placementCollapse">
-                <div class="card-body p-2">
-                    @if (relatedProductPlacements.Any())
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered table-compact mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="small">Date</th>
-                                        <th class="small">Qty</th>
-                                        <th class="small">Employee</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var placement in relatedProductPlacements)
-                                    {
-                                        <tr>
-                                            <td class="small">@placement.placement_date.ToShortDateString()</td>
-                                            <td class="small">@placement.quantity</td>
-                                            <td class="small">@GetEmployeeName(placement.employee_id)</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-info py-1 mb-0 small">No product placements found for this order.</div>
-                    }
-                </div>
-            </div>
-        </div>
+				<div class="col-md-4">
+					<div class="card card-compact mb-2">
+						<div class="card-header bg-success text-white py-1">
+							<h6 class="mb-0">Employee Information</h6>
+						</div>
+						<div class="card-body p-2">
+							<div class="row g-1">
+								<div class="col-md-12 mb-1">
+									<label class="form-label-sm mb-0">Employee</label>
+									<InputSelect class="form-select form-select-sm" @bind-Value="Order.EmployeeId">
+										@foreach (var employee in Employees)
+										{
+											<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
+										}
+									</InputSelect>
+									<ValidationMessage For="@(() => Order.EmployeeId)" />
+								</div>
+								@if (selectedEmployee != null)
+								{
+									<div class="col-md-6 mb-1">
+										<label class="form-label-sm mb-0">Position</label>
+										<span class="badge bg-light text-dark">@GetPositionName(selectedEmployee.position_id)</span>
+									</div>
+									<div class="col-md-12">
+										<label class="form-label-sm mb-0">Club</label>
+										<span class="badge bg-light text-dark">@GetClubName(selectedEmployee.club_id)</span>
+									</div>
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 
-        <!-- Supplied Equipment -->
-        <div class="card card-compact">
-            <div class="card-header bg-secondary text-white py-1 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Supplied Equipment</h6>
-                <button class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem">
-                    <i class="bi bi-plus-circle"></i> Add
-                </button>
-            </div>
-            <div class="card-body p-2">
-                <div class="table-responsive">
-                    <table class="table table-sm table-compact mb-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 30%;" class="small">Equipment</th>
-                                <th style="width: 15%;" class="small">Category</th>
-                                <th style="width: 15%;" class="small">Qty</th>
-                                <th style="width: 15%;" class="small">Price</th>
-                                <th style="width: 15%;" class="small">Total</th>
-                                <th style="width: 10%;" class="small"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Order.SuppliedEquipmentItems)
-                            {
-                                var equipment = EquipmentList.FirstOrDefault(e => e.equipment_id == item.EquipmentId);
-                                <tr>
-                                    <td>
-                                        <select class="form-select form-select-sm py-0" @bind="item.EquipmentId">
-                                            @foreach (var equip in EquipmentList)
-                                            {
-                                                <option value="@equip.equipment_id">@equip.name</option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td class="small">
-                                        @if (equipment != null)
-                                        {
-                                            @GetCategoryName(equipment.category_id)
-                                        }
-                                    </td>
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm py-0" @bind="item.Quantity" min="1" />
-                                    </td>
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm py-0" @bind="item.Price" step="0.01" min="0" />
-                                    </td>
-                                    <td class="small">@((item.Quantity * item.Price).ToString("C2"))</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-danger py-0 px-1" @onclick="() => RemoveEquipmentItem(item)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="4" class="text-end fw-bold small">Total Order Amount:</td>
-                                <td colspan="2" class="fw-bold small">@Order.SuppliedEquipmentItems.Sum(i => i.Quantity * i.Price).ToString("C2")</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-        </div>
+			<!-- Combined Equipment Section -->
+			<div class="card card-compact">
+				<div class="card-header bg-secondary text-white py-1 d-flex justify-content-between align-items-center">
+					<h6 class="mb-0">Equipment Management</h6>
+					<button type="button" class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem"
+							disabled="@(hasMaxEquipment || tempNewItem != null)">
+						<i class="bi bi-plus-circle"></i> Add
+					</button>
+				</div>
+				<div class="card-body p-2">
+					@if (tempNewItem != null)
+					{
+						<div class="mb-3 border p-2 bg-light">
+							<div class="row g-2">
+								<div class="col-md-3">
+									<label class="form-label-sm mb-0">Equipment</label>
+									<select class="form-select form-select-sm" @bind="tempNewItem.EquipmentId" @bind:after="UpdateEquipmentDetails">
+										<option value="0">-- Select Equipment --</option>
+										@foreach (var equip in EquipmentList)
+										{
+											<option value="@equip.equipment_id">@equip.name</option>
+										}
+									</select>
+								</div>
+								<div class="col-md-3">
+									<label class="form-label-sm mb-0">Category</label>
+									<input type="text" class="form-control form-control-sm" value="@GetCategoryName(tempSelectedEquipment?.category_id ?? 0)" disabled />
+								</div>
+								<div class="col-md-2">
+									<label class="form-label-sm mb-0">Type</label>
+									<input type="text" class="form-control form-control-sm" value="@GetTypeName(tempSelectedEquipment?.type_id ?? 0)" disabled />
+								</div>
+								<div class="col-md-2">
+									<label class="form-label-sm mb-0">Brand</label>
+									<input type="text" class="form-control form-control-sm" value="@GetBrandName(tempSelectedEquipment?.brand_id ?? 0)" disabled />
+								</div>
+								<div class="col-md-1">
+									<label class="form-label-sm mb-0">Quantity</label>
+									<input type="number" class="form-control form-control-sm" @bind="tempNewItem.Quantity" min="1" />
+								</div>
+								<div class="col-md-1">
+									<label class="form-label-sm mb-0">Price</label>
+									<input type="number" class="form-control form-control-sm" @bind="tempNewItem.Price" step="0.01" min="0" />
+								</div>
+							</div>
+							<div class="d-flex justify-content-end mt-2">
+								<button type="button" class="btn btn-sm btn-danger me-2" @onclick="CancelAddEquipment">
+									<i class="bi bi-x"></i> Cancel
+								</button>
+								<button type="button" class="btn btn-sm btn-success" @onclick="ConfirmAddEquipment"
+										disabled="@(tempNewItem.EquipmentId == 0 || tempNewItem.Quantity <= 0)">
+									<i class="bi bi-check"></i> Confirm
+								</button>
+							</div>
+						</div>
+					}
 
-        <div class="d-flex justify-content-end mt-2">
-            <button class="btn btn-sm btn-secondary me-2" @onclick="OnClose">Cancel</button>
-            <button class="btn btn-sm btn-primary" @onclick="SaveChanges">Save Changes</button>
-        </div>
-    </div>
+					<div class="table-responsive">
+						<table class="table table-sm table-compact mb-0">
+							<thead>
+								<tr>
+									<th style="width: 20%;" class="small">Equipment</th>
+									<th style="width: 10%;" class="small">Category</th>
+									<th style="width: 10%;" class="small">Type</th>
+									<th style="width: 10%;" class="small">Brand</th>
+									<th style="width: 8%;" class="small">Quantity</th>
+									<th style="width: 8%;" class="small">Price</th>
+									<th style="width: 8%;" class="small">Total</th>
+									<th style="width: 10%;" class="small">Status</th>
+									<th style="width: 16%;" class="small">Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var item in Order.SuppliedEquipmentItems)
+								{
+									var equipment = EquipmentList.FirstOrDefault(e => e.equipment_id == item.EquipmentId);
+									var placements = relatedProductPlacements.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId).ToList();
+									var placedQty = placements.Sum(p => p.quantity);
+									var remainingQty = item.Quantity - placedQty;
+									var canDelete = !item.IsExisting || (item.IsExisting && placedQty == 0);
+									var canEdit = !item.IsExisting || (item.IsExisting && placedQty == 0);
+
+									<tr class="@(item.IsExisting ? "table-light" : "")">
+										<td>
+											<div class="small fw-medium">
+												@if (equipment != null)
+												{
+													@equipment.name
+												}
+												else
+												{
+													@item.EquipmentName
+												}
+											</div>
+											<div class="small text-muted">@(equipment?.model ?? "")</div>
+										</td>
+										<td class="small">
+											@if (equipment != null)
+											{
+												@GetCategoryName(equipment.category_id)
+											}
+										</td>
+										<td class="small">
+											@if (equipment != null)
+											{
+												@GetTypeName(equipment.type_id)
+											}
+										</td>
+										<td class="small">
+											@if (equipment != null)
+											{
+												@GetBrandName(equipment.brand_id)
+											}
+										</td>
+										<td>
+											@if (canEdit)
+											{
+												<InputNumber class="form-control form-control-sm py-0" @bind-Value="item.Quantity" min="1" />
+											}
+											else
+											{
+												<span class="small">@item.Quantity</span>
+											}
+										</td>
+										<td>
+											@if (canEdit)
+											{
+												<InputNumber class="form-control form-control-sm py-0" @bind-Value="item.Price" step="0.01" min="0" />
+											}
+											else
+											{
+												<span class="small">@item.Price.ToString("C2")</span>
+											}
+										</td>
+										<td class="small">@((item.Quantity * item.Price).ToString("C2"))</td>
+										<td class="small">
+											@if (item.IsExisting)
+											{
+												@if (placedQty == 0)
+												{
+													<span class="badge bg-warning text-dark">Pending</span>
+												}
+												else if (placedQty < item.Quantity)
+												{
+													<span class="badge bg-info">Partially Placed</span>
+												}
+												else
+												{
+													<span class="badge bg-success">Placed</span>
+												}
+											}
+											else
+											{
+												<span class="badge bg-secondary">New</span>
+											}
+										</td>
+										<td>
+											@if (item.IsExisting && placements.Any())
+											{
+												<button type="button" class="btn btn-sm btn-info py-0 px-1"
+														data-bs-toggle="collapse" data-bs-target="#placement-@item.SuppliedEquipmentId">
+													<i class="bi bi-info-circle"></i> Placements
+												</button>
+
+												@if (canDelete)
+												{
+													<button type="button" class="btn btn-sm btn-danger py-0 px-1 ms-1" @onclick="() => RemoveEquipmentItem(item)">
+														<i class="bi bi-trash"></i>
+													</button>
+												}
+											}
+											else if (canDelete)
+											{
+												<button type="button" class="btn btn-sm btn-danger py-0 px-1" @onclick="() => RemoveEquipmentItem(item)">
+													<i class="bi bi-trash"></i>
+												</button>
+											}
+											else
+											{
+												<span class="badge bg-warning text-dark">
+													Cannot modify<br>
+													(Already placed)
+												</span>
+											}
+										</td>
+									</tr>
+									@if (item.IsExisting && placements.Any())
+									{
+										<tr class="collapse" id="placement-@item.SuppliedEquipmentId">
+											<td colspan="9" class="p-0">
+												<div class="bg-light p-2 border-top">
+													<h6 class="small mb-1">Placement Details:</h6>
+													<div class="row g-1">
+														@foreach (var placement in placements)
+														{
+															<div class="col-md-4">
+																<div class="border p-1 rounded small">
+																	<div><strong>Date:</strong> @placement.placement_date.ToString("g")</div>
+																	<div><strong>Quantity:</strong> @placement.quantity units</div>
+																	<div><strong>Employee:</strong> @GetEmployeeName(placement.employee_id)</div>
+																	<div><strong>Club:</strong> @GetClubName(GetEmployeeClubId(placement.employee_id))</div>
+																</div>
+															</div>
+														}
+													</div>
+													@if (remainingQty > 0)
+													{
+														<div class="mt-1">
+															<span class="badge bg-warning text-dark">@remainingQty units remaining to be placed</span>
+														</div>
+													}
+												</div>
+											</td>
+										</tr>
+									}
+								}
+							</tbody>
+							<tfoot>
+								<tr>
+									<td colspan="6" class="text-end fw-bold small">Total Order Amount:</td>
+									<td colspan="3" class="fw-bold small">@Order.SuppliedEquipmentItems.Sum(i => i.Quantity * i.Price).ToString("C2")</td>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- Storage Locations -->
+			<div class="card card-compact mt-2">
+				<div class="card-header bg-primary text-white py-1 d-flex justify-content-between align-items-center">
+					<h6 class="mb-0">Placement Summary</h6>
+					<button class="btn btn-sm btn-link p-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#placementSummaryCollapse">
+						<i class="bi bi-chevron-down"></i>
+					</button>
+				</div>
+				<div class="collapse show" id="placementSummaryCollapse">
+					<div class="card-body p-2">
+						@if (relatedProductPlacements.Any())
+						{
+							<div class="table-responsive">
+								<table class="table table-sm mb-0">
+									<thead>
+										<tr>
+											<th class="small">Placement Date</th>
+											<th class="small">Equipment</th>
+											<th class="small">Quantity</th>
+											<th class="small">Employee</th>
+											<th class="small">Club</th>
+										</tr>
+									</thead>
+									<tbody>
+										@foreach (var groupedPlacement in relatedProductPlacements.GroupBy(p => p.placement_date.Date))
+										{
+											<tr class="table-secondary">
+												<td colspan="5" class="small fw-bold py-1">
+													@groupedPlacement.Key.ToShortDateString() (@groupedPlacement.Count() placements)
+												</td>
+											</tr>
+
+											@foreach (var placement in groupedPlacement)
+											{
+												var suppliedEquipment = Order.SuppliedEquipmentItems
+												.FirstOrDefault(se => se.SuppliedEquipmentId == placement.supplied_equipment_id);
+												var availableEquipment = AvailableEquipmentList
+												.FirstOrDefault(ae => ae.available_id == placement.available_id);
+												var employee = Employees.FirstOrDefault(e => e.employee_id == placement.employee_id);
+
+												<tr>
+													<td class="small">@placement.placement_date.ToShortTimeString()</td>
+													<td class="small">@(suppliedEquipment?.EquipmentName ?? "Unknown")</td>
+													<td class="small">@placement.quantity</td>
+													<td class="small">@GetEmployeeName(placement.employee_id)</td>
+													<td class="small">
+														@if (employee != null)
+														{
+															@GetClubName(employee.club_id)
+														}
+													</td>
+												</tr>
+											}
+										}
+									</tbody>
+								</table>
+							</div>
+						}
+						else
+						{
+							<p class="text-muted small">No product placements found for this order.</p>
+						}
+					</div>
+				</div>
+			</div>
+		</EditForm>
+	</div>
+
+	<!-- Fixed buttons container -->
+	<div class="position-fixed bottom-0 end-0 p-3 bg-light border-top w-100 d-flex justify-content-end">
+		<button type="button" class="btn btn-sm btn-secondary me-2" @onclick="OnClose">Cancel</button>
+		<button type="button" class="btn btn-sm btn-primary" @onclick="SaveChanges">Save Changes</button>
+	</div>
 </div>
 
 @code {
-    [Parameter]
-    public SupplyOrderViewModel Order { get; set; } = null!;
+	[Parameter]
+	public SupplyOrderViewModel Order { get; set; } = null!;
 
-    [Parameter]
-    public List<Supplier> Suppliers { get; set; } = new();
+	[Parameter]
+	public List<Supplier> Suppliers { get; set; } = new();
 
-    [Parameter]
-    public List<SupplyOrderStatus> Statuses { get; set; } = new();
+	[Parameter]
+	public List<SupplyOrderStatus> Statuses { get; set; } = new();
 
-    [Parameter]
-    public List<Employee> Employees { get; set; } = new();
+	[Parameter]
+	public List<Employee> Employees { get; set; } = new();
 
-    [Parameter]
-    public List<Equipment> EquipmentList { get; set; } = new();
+	[Parameter]
+	public List<Equipment> EquipmentList { get; set; } = new();
 
-    [Parameter]
-    public List<Domain.Entities.Position> Positions { get; set; } = new();
+	[Parameter]
+	public List<Domain.Entities.Position> Positions { get; set; } = new();
 
-    [Parameter]
-    public List<Category> Categories { get; set; } = new();
+	[Parameter]
+	public List<Category> Categories { get; set; } = new();
 
-    [Parameter]
-    public List<ProductPlacement> ProductPlacements { get; set; } = new();
+	[Parameter]
+	public List<ProductPlacement> ProductPlacements { get; set; } = new();
 
-    [Parameter]
-    public EventCallback OnSave { get; set; }
+	[Parameter]
+	public List<AvailableEquipment> AvailableEquipmentList { get; set; } = new();
 
-    [Parameter]
-    public EventCallback OnClose { get; set; }
+	[Parameter]
+	public List<Club> Clubs { get; set; } = new();
 
-    private Supplier? selectedSupplier => Suppliers.FirstOrDefault(s => s.supplier_id == Order.SupplierId);
-    private Employee? selectedEmployee => Employees.FirstOrDefault(e => e.employee_id == Order.EmployeeId);
-    private List<ProductPlacement> relatedProductPlacements => ProductPlacements
-        .Where(p => Order.SuppliedEquipmentItems.Any(se => se.SuppliedEquipmentId == p.supplied_equipment_id))
-        .ToList();
+	[Parameter]
+	public List<Domain.Entities.Type> Types { get; set; } = new();
 
-    private string GetPositionName(int positionId)
-    {
-        return Positions.FirstOrDefault(p => p.position_id == positionId)?.position_name ?? "Unknown";
-    }
+	[Parameter]
+	public List<Brand> Brands { get; set; } = new();
 
-    private string GetCategoryName(int categoryId)
-    {
-        return Categories.FirstOrDefault(c => c.category_id == categoryId)?.category_name ?? "Unknown";
-    }
+	[Parameter]
+	public EventCallback OnSave { get; set; }
 
-    private string GetEmployeeName(int employeeId)
-    {
-        var employee = Employees.FirstOrDefault(e => e.employee_id == employeeId);
-        return employee != null ? $"{employee.first_name} {employee.last_name}" : "Unknown";
-    }
+	[Parameter]
+	public EventCallback OnClose { get; set; }
 
-    private async Task SaveChanges()
-    {
-        // Update total amount based on supplied equipment items
-        Order.TotalAmount = Order.SuppliedEquipmentItems.Sum(item => item.Quantity * item.Price);
+	private Supplier? selectedSupplier => Suppliers.FirstOrDefault(s => s.supplier_id == Order.SupplierId);
+	private Employee? selectedEmployee => Employees.FirstOrDefault(e => e.employee_id == Order.EmployeeId);
+	private List<ProductPlacement> relatedProductPlacements => ProductPlacements
+		.Where(p => Order.SuppliedEquipmentItems.Any(se => se.SuppliedEquipmentId == p.supplied_equipment_id))
+		.ToList();
 
-        await OnSave.InvokeAsync();
-    }
+	private bool hasMaxEquipment => Order.SuppliedEquipmentItems.Count(i => !i.IsExisting) >= 5;
 
-    private void AddEquipmentItem()
-    {
-        var newItem = new SuppliedEquipmentViewModel
-            {
-                SuppliedEquipmentId = 0,
-                SupplyOrderId = Order.SupplyOrderId,
-                EquipmentId = EquipmentList.FirstOrDefault()?.equipment_id ?? 0,
-                EquipmentName = EquipmentList.FirstOrDefault()?.name ?? "",
-                Quantity = 1,
-                Price = 0
-            };
+	// Temporary storage for new equipment item being added
+	private SuppliedEquipmentViewModel? tempNewItem = null;
+	private Equipment? tempSelectedEquipment = null;
 
-        Order.SuppliedEquipmentItems.Add(newItem);
-    }
+	private string GetPositionName(int positionId)
+	{
+		return Positions.FirstOrDefault(p => p.position_id == positionId)?.position_name ?? "Unknown";
+	}
 
-    private void RemoveEquipmentItem(SuppliedEquipmentViewModel item)
-    {
-        Order.SuppliedEquipmentItems.Remove(item);
-    }
+	private string GetCategoryName(int categoryId)
+	{
+		return Categories.FirstOrDefault(c => c.category_id == categoryId)?.category_name ?? "Unknown";
+	}
+
+	private string GetBrandName(int brandId)
+	{
+		return Brands.FirstOrDefault(b => b.brand_id == brandId)?.brand_name ?? "Unknown";
+	}
+
+	private string GetTypeName(int typeId)
+	{
+		return Types.FirstOrDefault(t => t.type_id == typeId)?.type_name ?? "Unknown";
+	}
+
+	private string GetClubName(int clubId)
+	{
+		return Clubs.FirstOrDefault(c => c.club_id == clubId)?.name ?? "Unknown";
+	}
+
+	private string GetEmployeeName(int employeeId)
+	{
+		var employee = Employees.FirstOrDefault(e => e.employee_id == employeeId);
+		return employee != null ? $"{employee.first_name} {employee.last_name}" : "Unknown";
+	}
+
+	private int GetEmployeeClubId(int employeeId)
+	{
+		var employee = Employees.FirstOrDefault(e => e.employee_id == employeeId);
+		return employee?.club_id ?? 0;
+	}
+
+	private async Task SaveChanges()
+	{
+		try
+		{
+			// Validate that all new equipment items have equipment selected
+			foreach (var item in Order.SuppliedEquipmentItems.Where(i => !i.IsExisting))
+			{
+				if (item.EquipmentId <= 0)
+				{
+					Snackbar.Add("Please select equipment for all new items", MudBlazor.Severity.Warning);
+					return;
+				}
+
+				if (item.Quantity <= 0 || item.Price < 0)
+				{
+					Snackbar.Add("Equipment quantity must be positive and price must be non-negative", MudBlazor.Severity.Warning);
+					return;
+				}
+			}
+
+			// Update total amount based on supplied equipment items
+			Order.TotalAmount = Order.SuppliedEquipmentItems.Sum(item => item.Quantity * item.Price);
+
+			await OnSave.InvokeAsync();
+			Snackbar.Add("Order details saved successfully", MudBlazor.Severity.Success);
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error saving changes: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	private void AddEquipmentItem()
+	{
+		if (hasMaxEquipment)
+		{
+			Snackbar.Add("You can add at most 5 new equipment items at once", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		// Initialize temporary item with default values
+		tempNewItem = new SuppliedEquipmentViewModel
+			{
+				SuppliedEquipmentId = 0,
+				SupplyOrderId = Order.SupplyOrderId,
+				EquipmentId = 0,  // No selection by default
+				Quantity = 1,
+				Price = 0
+			};
+	}
+
+	private void UpdateEquipmentDetails()
+	{
+		if (tempNewItem != null && tempNewItem.EquipmentId > 0)
+		{
+			tempSelectedEquipment = EquipmentList.FirstOrDefault(e => e.equipment_id == tempNewItem.EquipmentId);
+			if (tempSelectedEquipment != null)
+			{
+				tempNewItem.EquipmentName = tempSelectedEquipment.name;
+			}
+		}
+		else
+		{
+			tempSelectedEquipment = null;
+		}
+	}
+
+	private void ConfirmAddEquipment()
+	{
+		if (tempNewItem != null && tempNewItem.EquipmentId > 0 && tempNewItem.Quantity > 0)
+		{
+			Order.SuppliedEquipmentItems.Add(tempNewItem);
+			tempNewItem = null;
+			tempSelectedEquipment = null;
+		}
+		else
+		{
+			Snackbar.Add("Please select equipment and specify quantity", MudBlazor.Severity.Warning);
+		}
+	}
+
+	private void CancelAddEquipment()
+	{
+		tempNewItem = null;
+		tempSelectedEquipment = null;
+	}
+
+	private void RemoveEquipmentItem(SuppliedEquipmentViewModel item)
+	{
+		// Check if item can be removed (not existing or no placements)
+		var placements = relatedProductPlacements.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId).ToList();
+
+		if (!item.IsExisting || (item.IsExisting && !placements.Any()))
+		{
+			Order.SuppliedEquipmentItems.Remove(item);
+			Snackbar.Add("Equipment removed successfully", MudBlazor.Severity.Success);
+		}
+		else
+		{
+			Snackbar.Add("Cannot remove equipment that has been placed", MudBlazor.Severity.Error);
+		}
+	}
 }
 
 <style>
-    .order-details-panel {
-        background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        border-radius: 0px 0px 4px 4px;
-        padding: 0.75rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+	.order-details-panel {
+		background-color: #f8f9fa;
+		border: 1px solid #ddd;
+		border-radius: 0px 0px 4px 4px;
+		padding: 0.75rem;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		margin-bottom: 60px; /* Space for fixed button bar */
+	}
 
-    .order-details-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.25rem;
-        border-bottom: 1px solid #dee2e6;
-    }
+	.order-details-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		padding-bottom: 0.25rem;
+		border-bottom: 1px solid #dee2e6;
+	}
 
-    .order-details-body {
-        max-height: 650px;
-        overflow-y: auto;
-    }
+	.order-details-body {
+		max-height: 650px;
+		overflow-y: auto;
+		padding-bottom: 20px;
+	}
 
-    .card-compact .card-header {
-        padding: 0.25rem 0.5rem;
-    }
+	.card-compact .card-header {
+		padding: 0.25rem 0.5rem;
+	}
 
-    .card-compact .card-body {
-        padding: 0.5rem;
-    }
+	.card-compact .card-body {
+		padding: 0.5rem;
+	}
 
-    .form-label-sm {
-        font-size: 0.8rem;
-        margin-bottom: 0.1rem;
-    }
+	.form-label-sm {
+		font-size: 0.8rem;
+		margin-bottom: 0.1rem;
+	}
 
-    .table-compact th,
-    .table-compact td {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
+	.table-compact th,
+	.table-compact td {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.875rem;
+	}
 
-    /* Reduce spacing in tables */
-    .table-sm td, .table-sm th {
-        padding: 0.25rem;
-    }
+	/* Reduce spacing in tables */
+	.table-sm td, .table-sm th {
+		padding: 0.25rem;
+	}
 
-    /* Reduce form control sizes */
-    .form-control-sm, .form-select-sm {
-        padding: 0.125rem 0.25rem;
-        font-size: 0.875rem;
-    }
+	/* Reduce form control sizes */
+	.form-control-sm, .form-select-sm {
+		padding: 0.125rem 0.25rem;
+		font-size: 0.875rem;
+	}
 </style>
