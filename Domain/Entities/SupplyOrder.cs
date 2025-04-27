@@ -7,6 +7,8 @@ public class SupplyOrder
 {
     [Key]
     public int supply_order_id { get; set; }
+    [StringLength(50)]
+    public string supply_order_number { get; set; } = string.Empty;
 
     [Column(TypeName = "datetime")]
     public DateTime order_date { get; set; }

@@ -9,7 +9,7 @@ public class Order
     public int order_id { get; set; }
 
     [StringLength(50)]
-    public string order_number { get; set; } = null!;
+    public string order_number { get; set; } = string.Empty;
 
     [Column(TypeName = "decimal(10, 2)")]
     public decimal? total_amount { get; set; }

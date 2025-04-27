@@ -39,131 +39,41 @@
 			<tbody>
 				@foreach (var order in PaginatedOrders)
 				{
-					<tr>
+					<tr class="@GetStatusRowClass(order.StatusName)" @onclick="() => ToggleOrderDetails(order)">
 						<td class="text-end">@order.SupplyOrderNumber</td>
-						<td @onclick="() => BeginEdit(order, nameof(order.OrderDate))">
-							@if (editingOrder?.SupplyOrderId == order.SupplyOrderId && editingField == nameof(order.OrderDate))
-							{
-								<input type="date" class="form-control" @bind-value="order.OrderDate" @onblur="() => EndEdit()" @onclick:stopPropagation="true" />
-							}
-							else
-							{
-								@order.OrderDate.ToShortDateString()
-							}
+						<td>@order.OrderDate.ToShortDateString()</td>
+						<td>@order.SupplierName</td>
+						<td>
+							<span class="@GetStatusBadgeClass(order.StatusName)">@order.StatusName</span>
 						</td>
-						<td @onclick="() => BeginEdit(order, nameof(order.SupplierName))">
-							@if (editingOrder?.SupplyOrderId == order.SupplyOrderId && editingField == nameof(order.SupplierName))
-							{
-								<div class="dropdown-container">
-									<select class="form-select" @bind="order.SupplierId" @onblur="() => EndEdit()" @onclick:stopPropagation="true">
-										@foreach (var supplier in suppliers)
-										{
-											<option value="@supplier.supplier_id">@supplier.name</option>
-										}
-										<option value="-1">-- Add New Supplier --</option>
-									</select>
-									@if (order.SupplierId == -1)
-									{
-										<div class="mt-2">
-											<div class="input-group input-group-sm">
-												<input type="text" class="form-control" placeholder="New supplier name" @bind="newSupplierName" @onclick:stopPropagation="true" />
-												<button class="btn btn-primary btn-sm" @onclick="() => AddNewSupplier()" @onclick:stopPropagation="true">Add</button>
-												<button class="btn btn-secondary btn-sm" @onclick="() => CancelNewItem()" @onclick:stopPropagation="true">Cancel</button>
-											</div>
-										</div>
-									}
-								</div>
-							}
-							else
-							{
-								@order.SupplierName
-							}
-						</td>
-						<td @onclick="() => BeginEdit(order, nameof(order.StatusName))">
-							@if (editingOrder?.SupplyOrderId == order.SupplyOrderId && editingField == nameof(order.StatusName))
-							{
-								<div class="dropdown-container">
-									<select class="form-select" @bind="order.StatusId" @onblur="() => EndEdit()" @onclick:stopPropagation="true">
-										@foreach (var status in statuses)
-										{
-											<option value="@status.status_id">@status.status_name</option>
-										}
-										<option value="-1">-- Add New Status --</option>
-									</select>
-									@if (order.StatusId == -1)
-									{
-										<div class="mt-2">
-											<div class="input-group input-group-sm">
-												<input type="text" class="form-control" placeholder="New status name" @bind="newStatusName" @onclick:stopPropagation="true" />
-												<button class="btn btn-primary btn-sm" @onclick="() => AddNewStatus()" @onclick:stopPropagation="true">Add</button>
-												<button class="btn btn-secondary btn-sm" @onclick="() => CancelNewItem()" @onclick:stopPropagation="true">Cancel</button>
-											</div>
-										</div>
-									}
-								</div>
-							}
-							else
-							{
-								<span class="@GetStatusBadgeClass(order.StatusName)">@order.StatusName</span>
-							}
-						</td>
-						<td @onclick="() => BeginEdit(order, nameof(order.EmployeeName))">
-							@if (editingOrder?.SupplyOrderId == order.SupplyOrderId && editingField == nameof(order.EmployeeName))
-							{
-								<div class="dropdown-container">
-									<select class="form-select" @bind="order.EmployeeId" @onblur="() => EndEdit()" @onclick:stopPropagation="true">
-										@foreach (var employee in employees)
-										{
-											<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
-										}
-										<option value="-1">-- Add New Employee --</option>
-									</select>
-									@if (order.EmployeeId == -1)
-									{
-										<div class="mt-2">
-											<div class="input-group input-group-sm mb-1">
-												<input type="text" class="form-control" placeholder="First name" @bind="newEmployeeFirstName" @onclick:stopPropagation="true" />
-											</div>
-											<div class="input-group input-group-sm mb-1">
-												<input type="text" class="form-control" placeholder="Last name" @bind="newEmployeeLastName" @onclick:stopPropagation="true" />
-											</div>
-											<div>
-												<button class="btn btn-primary btn-sm" @onclick="() => AddNewEmployee()" @onclick:stopPropagation="true">Add</button>
-												<button class="btn btn-secondary btn-sm" @onclick="() => CancelNewItem()" @onclick:stopPropagation="true">Cancel</button>
-											</div>
-										</div>
-									}
-								</div>
-							}
-							else
-							{
-								@order.EmployeeName
-							}
-						</td>
-						<td @onclick="() => BeginEdit(order, nameof(order.SuppliedEquipmentItems))">
-							@if (editingOrder?.SupplyOrderId == order.SupplyOrderId && editingField == nameof(order.SuppliedEquipmentItems))
-							{
-								<SuppliedEquipmentEditor SuppliedEquipmentItems="order.SuppliedEquipmentItems"
-														 EquipmentList="equipmentList"
-														 OnSaveChanges="() => SaveEquipmentChanges(order)"
-														 OnCancel="CancelEdit" />
-							}
-							else
-							{
-								<button class="btn btn-sm btn-outline-secondary" @onclick="() => BeginEdit(order, nameof(order.SuppliedEquipmentItems))">
-									View (@order.SuppliedEquipmentItems.Count items)
-								</button>
-							}
-						</td>
+						<td>@order.EmployeeName</td>
+						<td>@order.SuppliedEquipmentItems.Count items</td>
 						<td class="text-end">@order.TotalAmount.ToString("C2")</td>
 						<td>
 							<div class="d-flex justify-content-around">
-								<button class="btn btn-sm btn-danger" @onclick="() => DeleteOrder(order.SupplyOrderId)">
+								<button class="btn btn-sm btn-danger" @onclick="(e) => DeleteOrder(order.SupplyOrderId, e)">
 									<i class="bi bi-trash"></i>
 								</button>
 							</div>
 						</td>
 					</tr>
+					@if (selectedOrder?.SupplyOrderId == order.SupplyOrderId)
+					{
+						<tr>
+							<td colspan="8" class="p-0 order-details-container">
+								<OrderDetailsPanel Order="selectedOrder"
+												   Suppliers="suppliers"
+												   Statuses="statuses"
+												   Employees="employees"
+												   EquipmentList="equipmentList"
+												   Positions="positions"
+												   Categories="categories"
+												   ProductPlacements="productPlacements"
+												   OnSave="SaveOrderDetails"
+												   OnClose="CloseOrderDetails" />
+							</td>
+						</tr>
+					}
 				}
 			</tbody>
 		</table>
@@ -185,16 +95,11 @@
 	private List<Employee> employees = new();
 	private List<Equipment> equipmentList = new();
 	private List<SuppliedEquipment> suppliedEquipments = new();
+	private List<Domain.Entities.Position> positions = new();
+	private List<Category> categories = new();
+	private List<ProductPlacement> productPlacements = new();
 
-	private SupplyOrderViewModel? editingOrder;
-	private string? editingField;
-
-	// For new item entry
-	private string newSupplierName = "";
-	private string newStatusName = "";
-	private string newEmployeeFirstName = "";
-	private string newEmployeeLastName = "";
-	private string newEquipmentName = "";
+	private SupplyOrderViewModel? selectedOrder;
 
 	// Pagination parameters
 	private int currentPage = 1;
@@ -234,13 +139,19 @@
 		var employeesResponse = await ApiFacade.EmployeeApiService.Get();
 		var equipmentResponse = await ApiFacade.EquipmentApiService.Get();
 		var suppliedEquipmentsResponse = await ApiFacade.SuppliedEquipmentApiService.Get();
+		var positionsResponse = await ApiFacade.PositionApiService.Get();
+		var categoriesResponse = await ApiFacade.CategoryApiService.Get();
+		var productPlacementsResponse = await ApiFacade.ProductPlacementApiService.Get();
 
 		if (!supplyOrdersResponse.IsSuccessStatusCode ||
 			!suppliersResponse.IsSuccessStatusCode ||
 			!statusesResponse.IsSuccessStatusCode ||
 			!employeesResponse.IsSuccessStatusCode ||
 			!equipmentResponse.IsSuccessStatusCode ||
-			!suppliedEquipmentsResponse.IsSuccessStatusCode)
+			!suppliedEquipmentsResponse.IsSuccessStatusCode ||
+			!positionsResponse.IsSuccessStatusCode ||
+			!categoriesResponse.IsSuccessStatusCode ||
+			!productPlacementsResponse.IsSuccessStatusCode)
 		{
 			return;
 		}
@@ -251,11 +162,14 @@
 		employees = employeesResponse.Content.ToList();
 		equipmentList = equipmentResponse.Content.ToList();
 		suppliedEquipments = suppliedEquipmentsResponse.Content.ToList();
+		positions = positionsResponse.Content.ToList();
+		categories = categoriesResponse.Content.ToList();
+		productPlacements = productPlacementsResponse.Content.ToList();
 
 		orders = supplyOrders.Select(o => new SupplyOrderViewModel
 			{
 				SupplyOrderId = o.supply_order_id,
-				// SupplyOrderNumber = o.supply_order_number,
+				SupplyOrderNumber = o.supply_order_number,
 				OrderDate = o.order_date,
 				SupplierId = o.supplier_id,
 				SupplierName = suppliers.FirstOrDefault(s => s.supplier_id == o.supplier_id)?.name ?? "Unknown",
@@ -294,7 +208,7 @@
 
 	private string GetStatusBadgeClass(string statusName)
 	{
-		return statusName.ToLower() switch
+		return statusName switch
 		{
 			SupplyOrderStatuses.Pending => "badge bg-warning text-dark",
 			SupplyOrderStatuses.Confirmed => "badge bg-info text-dark",
@@ -305,196 +219,81 @@
 		};
 	}
 
-	private void BeginEdit(SupplyOrderViewModel order, string field)
+	private string GetStatusRowClass(string statusName)
 	{
-		editingOrder = order;
-		editingField = field;
+		return statusName switch
+		{
+			SupplyOrderStatuses.Pending => "table-warning",   // жовтий фон
+			SupplyOrderStatuses.Confirmed => "table-info",    // блакитний фон
+			SupplyOrderStatuses.Processing => "table-primary", // синій фон
+			SupplyOrderStatuses.Completed => "table-success", // зелений фон
+			SupplyOrderStatuses.Cancelled => "table-danger",  // червоний фон
+			_ => "table-secondary"
+		};
 	}
 
-	private async Task EndEdit()
+	private void ToggleOrderDetails(SupplyOrderViewModel order)
 	{
-		if (editingOrder != null && editingField != nameof(editingOrder.SuppliedEquipmentItems))
+		if (selectedOrder?.SupplyOrderId == order.SupplyOrderId)
 		{
-			await SaveChanges(editingOrder);
-			editingOrder = null;
-			editingField = null;
+			selectedOrder = null;
+		}
+		else
+		{
+			selectedOrder = order;
 		}
 	}
 
-	private void CancelEdit()
+	private void CloseOrderDetails()
 	{
-		editingOrder = null;
-		editingField = null;
-	}
-	private void ResetNewItemFields()
-	{
-		newSupplierName = "";
-		newStatusName = "";
-		newEmployeeFirstName = "";
-		newEmployeeLastName = "";
-		newEquipmentName = "";
+		selectedOrder = null;
 	}
 
-	private void CancelNewItem()
+	private async Task SaveOrderDetails()
 	{
-		if (editingOrder != null)
+		if (selectedOrder != null)
 		{
-			if (editingField == nameof(editingOrder.SupplierName))
-				editingOrder.SupplierId = suppliers.FirstOrDefault()?.supplier_id ?? 0;
-			else if (editingField == nameof(editingOrder.StatusName))
-				editingOrder.StatusId = statuses.FirstOrDefault()?.status_id ?? 0;
-			else if (editingField == nameof(editingOrder.EmployeeName))
-				editingOrder.EmployeeId = employees.FirstOrDefault()?.employee_id ?? 0;
-		}
-
-		ResetNewItemFields();
-	}
-
-	private async Task AddNewSupplier()
-	{
-		if (string.IsNullOrWhiteSpace(newSupplierName)) return;
-
-		var newSupplier = new Supplier
-			{
-				name = newSupplierName,
-				CreateDatetime = DateTime.Now,
-				UpdateDatetime = DateTime.Now
-			};
-
-		var response = await ApiFacade.SuppliersApiService.Create(newSupplier);
-		if (response.IsSuccessStatusCode && editingOrder != null)
-		{
-			await LoadData();
-			var createdSupplier = suppliers.FirstOrDefault(s => s.name == newSupplierName);
-			if (createdSupplier != null)
-			{
-				editingOrder.SupplierId = createdSupplier.supplier_id;
-				editingOrder.SupplierName = createdSupplier.name;
-			}
-		}
-
-		newSupplierName = "";
-	}
-
-	private async Task AddNewStatus()
-	{
-		if (string.IsNullOrWhiteSpace(newStatusName)) return;
-
-		var newStatus = new SupplyOrderStatus
-			{
-				status_name = newStatusName,
-				CreateDatetime = DateTime.Now,
-				UpdateDatetime = DateTime.Now
-			};
-
-		var response = await ApiFacade.SupplyOrderStatusApiService.Create(newStatus);
-		if (response.IsSuccessStatusCode && editingOrder != null)
-		{
-			await LoadData();
-			var createdStatus = statuses.FirstOrDefault(s => s.status_name == newStatusName);
-			if (createdStatus != null)
-			{
-				editingOrder.StatusId = createdStatus.status_id;
-				editingOrder.StatusName = createdStatus.status_name;
-			}
-		}
-
-		newStatusName = "";
-	}
-
-	private async Task AddNewEmployee()
-	{
-		if (string.IsNullOrWhiteSpace(newEmployeeFirstName) || string.IsNullOrWhiteSpace(newEmployeeLastName)) return;
-
-		var newEmployee = new Employee
-			{
-				first_name = newEmployeeFirstName,
-				last_name = newEmployeeLastName,
-				CreateDatetime = DateTime.Now,
-				UpdateDatetime = DateTime.Now
-			};
-
-		var response = await ApiFacade.EmployeeApiService.Create(newEmployee);
-		if (response.IsSuccessStatusCode && editingOrder != null)
-		{
-			await LoadData();
-			var createdEmployee = employees.FirstOrDefault(e =>
-				e.first_name == newEmployeeFirstName && e.last_name == newEmployeeLastName);
-
-			if (createdEmployee != null)
-			{
-				editingOrder.EmployeeId = createdEmployee.employee_id;
-				editingOrder.EmployeeName = $"{createdEmployee.first_name} {createdEmployee.last_name}";
-			}
-		}
-
-		newEmployeeFirstName = "";
-		newEmployeeLastName = "";
-	}
-
-	private async Task SaveChanges(SupplyOrderViewModel order)
-	{
-		var supplyOrder = new SupplyOrder
-			{
-				supply_order_id = order.SupplyOrderId,
-				order_date = order.OrderDate,
-				supplier_id = order.SupplierId,
-				status_id = order.StatusId,
-				employee_id = order.EmployeeId,
-				total_amount = order.TotalAmount,
-				UpdateDatetime = DateTime.Now
-			};
-
-		await ApiFacade.SupplyOrdersApiService.Update(supplyOrder.supply_order_id, supplyOrder);
-		await LoadData();
-	}
-
-	private async Task SaveEquipmentChanges(SupplyOrderViewModel order)
-	{
-		// Calculate new total amount
-		order.TotalAmount = order.SuppliedEquipmentItems.Sum(item => item.Quantity * item.Price);
-
-		// First update the supply order with new total
-		await SaveChanges(order);
-
-		// Then update all equipment items
-		foreach (var item in order.SuppliedEquipmentItems)
-		{
-			var suppliedEquipment = new SuppliedEquipment
+			// Save base order information
+			var supplyOrder = new SupplyOrder
 				{
-					supplied_equipment_id = item.SuppliedEquipmentId,
-					supply_order_id = item.SupplyOrderId,
-					equipment_id = item.EquipmentId,
-					quantity = item.Quantity,
-					price = item.Price,
+					supply_order_id = selectedOrder.SupplyOrderId,
+					order_date = selectedOrder.OrderDate,
+					supplier_id = selectedOrder.SupplierId,
+					status_id = selectedOrder.StatusId,
+					employee_id = selectedOrder.EmployeeId,
+					total_amount = selectedOrder.TotalAmount,
 					UpdateDatetime = DateTime.Now
 				};
 
-			if (item.SuppliedEquipmentId > 0)
-			{
-				await ApiFacade.SuppliedEquipmentApiService.Update(suppliedEquipment.supplied_equipment_id, suppliedEquipment);
-			}
-			else
-			{
-				// For new items
-				suppliedEquipment.CreateDatetime = DateTime.Now;
-				await ApiFacade.SuppliedEquipmentApiService.Create(suppliedEquipment);
-			}
-		}
+			await ApiFacade.SupplyOrdersApiService.Update(supplyOrder.supply_order_id, supplyOrder);
 
-		// Remove deleted items from the database
-		var existingItems = suppliedEquipments.Where(se => se.supply_order_id == order.SupplyOrderId);
-		foreach (var existing in existingItems)
-		{
-			if (!order.SuppliedEquipmentItems.Any(i => i.SuppliedEquipmentId == existing.supplied_equipment_id))
+			// Save supplied equipment items
+			foreach (var item in selectedOrder.SuppliedEquipmentItems)
 			{
-				await ApiFacade.SuppliedEquipmentApiService.Delete(existing.supplied_equipment_id);
-			}
-		}
+				var suppliedEquipment = new SuppliedEquipment
+					{
+						supplied_equipment_id = item.SuppliedEquipmentId,
+						supply_order_id = item.SupplyOrderId,
+						equipment_id = item.EquipmentId,
+						quantity = item.Quantity,
+						price = item.Price,
+						UpdateDatetime = DateTime.Now
+					};
 
-		editingOrder = null;
-		editingField = null;
-		await LoadData();
+				if (item.SuppliedEquipmentId > 0)
+				{
+					await ApiFacade.SuppliedEquipmentApiService.Update(suppliedEquipment.supplied_equipment_id, suppliedEquipment);
+				}
+				else
+				{
+					// For new items
+					suppliedEquipment.CreateDatetime = DateTime.Now;
+					await ApiFacade.SuppliedEquipmentApiService.Create(suppliedEquipment);
+				}
+			}
+
+			await LoadData();
+		}
 	}
 
 	private void CreateNewOrder()
@@ -502,8 +301,10 @@
 		NavigationManager.NavigateTo("/supply-orders/create");
 	}
 
-	private async Task DeleteOrder(int orderId)
+	private async Task DeleteOrder(int orderId, MouseEventArgs e)
 	{
+		// e.StopPropagation(); // Prevent row click event
+
 		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this order?");
 		if (confirmed)
 		{
@@ -523,7 +324,7 @@
 	public class SupplyOrderViewModel
 	{
 		public int SupplyOrderId { get; set; }
-		public int SupplyOrderNumber { get; set; }
+		public string SupplyOrderNumber { get; set; } = string.Empty;
 		public DateTime OrderDate { get; set; }
 		public int SupplierId { get; set; }
 		public string SupplierName { get; set; } = "";
@@ -548,7 +349,7 @@
 
 <style>
 	.table-container {
-		max-height: 500px;
+		max-height: 700px;
 		overflow-y: auto;
 		margin-bottom: 1rem;
 	}
@@ -560,17 +361,8 @@
 		background-color: #f8f9fa;
 	}
 
-	.equipment-editor {
-		background-color: #f8f9fa;
-		border-radius: 4px;
-		box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-		max-height: 400px;
-		overflow-y: auto;
-		width: 400px;
-		z-index: 1000;
-	}
-
-	.equipment-item {
-		background-color: white;
+	/* Order details panel */
+	.order-details-container {
+		border-top: none !important;
 	}
 </style>
