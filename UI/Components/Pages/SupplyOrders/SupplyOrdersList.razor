@@ -47,20 +47,8 @@
 				@foreach (var order in PaginatedOrders)
 				{
 					<tr class="@GetStatusRowClass(order.StatusName)">
-						<td class="text-end cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, OrderNumberField)">
-							@if (editingOrderId == order.SupplyOrderId && editingField == OrderNumberField)
-							{
-								<input type="text" class="form-control form-control-sm"
-									   value="@order.SupplyOrderNumber"
-									   @onchange="(e) => UpdateOrderField(order, OrderNumberField, e.Value)"
-									   @onblur="() => StopEditing()"
-									   @onclick:stopPropagation="true"
-									   @onkeydown="(e) => HandleKeyDown(e, order, OrderNumberField)" />
-							}
-							else
-							{
-								<span>@order.SupplyOrderNumber</span>
-							}
+						<td class="text-end cell-editable">
+							<span>@order.SupplyOrderNumber</span>
 						</td>
 						<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, OrderDateField)">
 							@if (editingOrderId == order.SupplyOrderId && editingField == OrderDateField)
@@ -339,7 +327,7 @@
 
 	private List<SuppliedEquipmentViewModel> GetSuppliedEquipmentItems(int supplyOrderId)
 	{
-		return suppliedEquipments
+		var equipmentItems = suppliedEquipments
 			.Where(se => se.supply_order_id == supplyOrderId)
 			.Select(se => new SuppliedEquipmentViewModel
 				{
@@ -349,8 +337,33 @@
 					EquipmentName = equipmentList.FirstOrDefault(e => e.equipment_id == se.equipment_id)?.name ?? "Unknown",
 					Quantity = se.quantity,
 					Price = se.price,
-					IsExisting = true
+					IsExisting = true,
+					Placements = GetPlacements(se.supplied_equipment_id)
 				}).ToList();
+
+		return equipmentItems;
+	}
+
+	private List<PlacementViewModel> GetPlacements(int suppliedEquipmentId)
+	{
+		return productPlacements
+			.Where(pp => pp.supplied_equipment_id == suppliedEquipmentId)
+			.Select(pp =>
+			{
+				var availableEquipment = availableEquipments.FirstOrDefault(ae => ae.available_id == pp.available_id);
+				return new PlacementViewModel
+					{
+						PlacementId = pp.placement_id,
+						PlacementDate = pp.placement_date,
+						Quantity = pp.quantity,
+						EmployeeId = pp.employee_id,
+						EmployeeName = GetEmployeeName(pp.employee_id),
+						ClubId = availableEquipment?.club_id ?? 0,
+						ClubName = clubs.FirstOrDefault(c => c.club_id == availableEquipment?.club_id)?.name ?? "Unknown",
+						AvailableId = pp.available_id,
+						IsExisting = true
+					};
+			}).ToList();
 	}
 
 	private string GetStatusBadgeClass(string statusName)
@@ -530,6 +543,11 @@
 	{
 		selectedOrder = null;
 	}
+	private int GetEmployeeClubId(int employeeId)
+	{
+		var employee = employees.FirstOrDefault(e => e.employee_id == employeeId);
+		return employee?.club_id ?? 0;
+	}
 
 	private async Task SaveOrderDetails()
 	{
@@ -571,6 +589,14 @@
 
 				foreach (var item in itemsToDelete)
 				{
+					// Check if this item has any placements first
+					var hasPlacement = productPlacements.Any(p => p.supplied_equipment_id == item.supplied_equipment_id);
+					if (hasPlacement)
+					{
+						Snackbar.Add($"Cannot delete equipment with placements", MudBlazor.Severity.Warning);
+						continue;
+					}
+
 					await ApiFacade.SuppliedEquipmentApiService.Delete(item.supplied_equipment_id);
 				}
 
@@ -589,7 +615,16 @@
 
 					if (item.SuppliedEquipmentId > 0 && item.IsExisting)
 					{
-						await ApiFacade.SuppliedEquipmentApiService.Update(suppliedEquipment.supplied_equipment_id, suppliedEquipment);
+						var response =await ApiFacade.SuppliedEquipmentApiService.Update(suppliedEquipment.supplied_equipment_id, suppliedEquipment);
+						if (response.IsSuccessStatusCode)
+						{
+							Snackbar.Add("Successful to Update SuppliedEquipment record", MudBlazor.Severity.Success);
+						}
+						else
+						{
+							Snackbar.Add("Failed to create SuppliedEquipment record", MudBlazor.Severity.Error);
+							continue;
+						}
 					}
 					else if (!item.IsExisting)
 					{
@@ -600,6 +635,140 @@
 						{
 							item.SuppliedEquipmentId = createResponse.Content.supplied_equipment_id;
 							item.IsExisting = true;
+						}
+					}
+
+					// Process placement items
+					if (item.Placements != null && item.Placements.Any())
+					{
+						foreach (var placement in item.Placements)
+						{
+							if (!placement.IsExisting)
+							{
+								// If there's no available equipment record for this club and equipment, create one
+								var availableEquipment = availableEquipments.FirstOrDefault(ae =>
+									ae.equipment_id == item.EquipmentId && ae.club_id == placement.ClubId);
+
+								if (availableEquipment == null)
+								{
+									// Create new available equipment record
+									var newAvailable = new AvailableEquipment
+										{
+											equipment_id = item.EquipmentId,
+											club_id = placement.ClubId,
+											available_quantity = placement.Quantity,
+											rental_price = item.Price * 1.5m, // Default markup for rental
+											CreateDatetime = DateTime.Now,
+											UpdateDatetime = DateTime.Now
+										};
+
+									var availableResponse = await ApiFacade.AvailableEquipmentApiService.Create(newAvailable);
+									if (availableResponse.IsSuccessStatusCode && availableResponse.Content != null)
+									{
+										availableEquipment = availableResponse.Content;
+										availableEquipments.Add(availableEquipment); // Add to local cache
+									}
+									else
+									{
+										Snackbar.Add("Failed to create available equipment record", MudBlazor.Severity.Error);
+										continue;
+									}
+								}
+								else
+								{
+									// Update existing available equipment quantity
+									availableEquipment.available_quantity += placement.Quantity;
+									var availableResponse = await ApiFacade.AvailableEquipmentApiService.Update(availableEquipment.available_id, availableEquipment);
+									if (availableResponse.IsSuccessStatusCode)
+									{
+									}
+									else
+									{
+										Snackbar.Add("Failed to create available equipment record", MudBlazor.Severity.Error);
+										continue;
+									}
+								}
+
+								// Create product placement record
+								var newPlacement = new ProductPlacement
+									{
+										placement_date = placement.PlacementDate,
+										quantity = placement.Quantity,
+										employee_id = placement.EmployeeId,
+										available_id = availableEquipment.available_id,
+										supplied_equipment_id = item.SuppliedEquipmentId,
+										CreateDatetime = DateTime.Now,
+										UpdateDatetime = DateTime.Now
+									};
+
+								var placementResponse = await ApiFacade.ProductPlacementApiService.Create(newPlacement);
+								if (placementResponse.IsSuccessStatusCode && placementResponse.Content != null)
+								{
+									productPlacements.Add(placementResponse.Content); // Add to local cache
+									placement.PlacementId = placementResponse.Content.placement_id;
+									placement.IsExisting = true;
+								}
+							}
+						}
+					}
+
+					// Process placements from EquipmentManagementPanel
+					var panelPlacements = productPlacements
+						.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId &&
+										!p.CreateDatetime.HasValue)
+						.ToList();
+
+					foreach (var placement in panelPlacements)
+					{
+						// Check if this is a new placement (not yet saved to database)
+						if (placement.placement_id <= 0 || !placement.CreateDatetime.HasValue)
+						{
+							// Get available equipment
+							var availableEquipment = availableEquipments.FirstOrDefault(ae => ae.available_id == placement.available_id);
+
+							if (availableEquipment == null)
+							{
+								// Create new available equipment record
+								var newAvailable = new AvailableEquipment
+									{
+										equipment_id = item.EquipmentId,
+										club_id = GetEmployeeClubId(placement.employee_id),
+										available_quantity = placement.quantity,
+										rental_price = item.Price * 1.5m, // Default markup for rental
+										CreateDatetime = DateTime.Now,
+										UpdateDatetime = DateTime.Now
+									};
+
+								var availableResponse = await ApiFacade.AvailableEquipmentApiService.Create(newAvailable);
+								if (availableResponse.IsSuccessStatusCode && availableResponse.Content != null)
+								{
+									availableEquipment = availableResponse.Content;
+									availableEquipments.Add(availableEquipment); // Add to local cache
+									placement.available_id = availableEquipment.available_id;
+								}
+								else
+								{
+									Snackbar.Add("Failed to create available equipment record", MudBlazor.Severity.Error);
+									continue;
+								}
+							}
+							else
+							{
+								// Update existing available equipment quantity
+								availableEquipment.available_quantity += placement.quantity;
+								await ApiFacade.AvailableEquipmentApiService.Update(availableEquipment.available_id, availableEquipment);
+							}
+
+							// Set creation datetime
+							placement.CreateDatetime = DateTime.Now;
+							placement.UpdateDatetime = DateTime.Now;
+
+							// Create the placement in database
+							var placementResponse = await ApiFacade.ProductPlacementApiService.Create(placement);
+							if (!placementResponse.IsSuccessStatusCode)
+							{
+								Snackbar.Add("Failed to save placement.", MudBlazor.Severity.Error);
+							}
 						}
 					}
 				}
@@ -632,7 +801,6 @@
 			}
 		}
 	}
-
 	private void CreateNewOrder()
 	{
 		NavigationManager.NavigateTo("/supply-orders/create");
@@ -731,6 +899,19 @@
 		public decimal Price { get; set; }
 
 		// Flag to indicate if this is an existing record or a new one
+		public bool IsExisting { get; set; }
+		public List<PlacementViewModel> Placements { get; set; } = new();
+	}
+	public class PlacementViewModel
+	{
+		public int PlacementId { get; set; }
+		public DateTime PlacementDate { get; set; } = DateTime.Today;
+		public int Quantity { get; set; }
+		public int EmployeeId { get; set; }
+		public int ClubId { get; set; }
+		public string ClubName { get; set; } = "";
+		public string EmployeeName { get; set; } = "";
+		public int AvailableId { get; set; }
 		public bool IsExisting { get; set; }
 	}
 }

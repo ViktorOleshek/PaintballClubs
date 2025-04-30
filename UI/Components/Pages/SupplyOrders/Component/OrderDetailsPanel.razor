@@ -1,7 +1,9 @@
-﻿@using Domain.Entities
+﻿@using Domain.Constants
+@using Domain.Entities
 @using static UI.Components.Pages.SupplyOrders.SupplyOrdersList
 @inject Services.ExternalApi.Facade.IApiFacade ApiFacade
 @inject MudBlazor.ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <div class="order-details-panel">
 	<div class="order-details-header">
@@ -96,15 +98,23 @@
 			<div class="card card-compact">
 				<div class="card-header bg-secondary text-white py-1 d-flex justify-content-between align-items-center">
 					<h6 class="mb-0">Equipment Management</h6>
-					<button type="button" class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem"
-							disabled="@(hasMaxEquipment || tempNewItem != null)">
-						<i class="bi bi-plus-circle"></i> Add
-					</button>
+					<div>
+						<button type="button" class="btn btn-sm btn-success py-0 px-1 me-1" @onclick="AddPlacementItem"
+								disabled="@(tempNewPlacement != null || tempNewItem != null || !availableItemsForPlacement.Any() || IsOrderReadOnly)">
+							<i class="bi bi-box-arrow-right"></i> New Placement
+						</button>
+						<button type="button" class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem"
+								disabled="@(hasMaxEquipment || tempNewItem != null || tempNewPlacement != null || IsOrderReadOnly)">
+							<i class="bi bi-plus-circle"></i> Add Equipment
+						</button>
+					</div>
 				</div>
 				<div class="card-body p-2">
+					<!-- New Equipment Form -->
 					@if (tempNewItem != null)
 					{
 						<div class="mb-3 border p-2 bg-light">
+							<h6 class="small fw-bold">Add New Equipment</h6>
 							<div class="row g-2">
 								<div class="col-md-3">
 									<label class="form-label-sm mb-0">Equipment</label>
@@ -141,8 +151,68 @@
 								<button type="button" class="btn btn-sm btn-danger me-2" @onclick="CancelAddEquipment">
 									<i class="bi bi-x"></i> Cancel
 								</button>
+
 								<button type="button" class="btn btn-sm btn-success" @onclick="ConfirmAddEquipment"
-										disabled="@(tempNewItem.EquipmentId == 0 || tempNewItem.Quantity <= 0)">
+										disabled="@(tempNewItem.EquipmentId == 0 || tempNewItem.Quantity <= 0 || tempNewItem.Price <= 0)">
+									<i class="bi bi-check"></i> Confirm
+								</button>
+							</div>
+						</div>
+					}
+
+					<!-- New Placement Form -->
+					@if (tempNewPlacement != null)
+					{
+						<div class="mb-3 border p-2 bg-info bg-opacity-10">
+							<h6 class="small fw-bold">Create New Placement</h6>
+							<div class="row g-2">
+								<div class="col-md-3">
+									<label class="form-label-sm mb-0">Equipment</label>
+									<select class="form-select form-select-sm" @bind="tempNewPlacement.SuppliedEquipmentId" @bind:after="UpdatePlacementDetails">
+										<option value="0">-- Select Equipment --</option>
+										@foreach (var item in availableItemsForPlacement)
+										{
+											var equipment = EquipmentList.FirstOrDefault(e => e.equipment_id == item.EquipmentId);
+											<option value="@item.SuppliedEquipmentId">@item.EquipmentName (@GetRemainingQuantity(item) available)</option>
+										}
+									</select>
+								</div>
+								<div class="col-md-2">
+									<label class="form-label-sm mb-0">Quantity</label>
+									<input type="number" class="form-control form-control-sm" @bind="tempNewPlacement.Quantity"
+										   min="1" max="@tempMaxPlacementQuantity" />
+								</div>
+								<div class="col-md-3">
+									<label class="form-label-sm mb-0">Club</label>
+									<select class="form-select form-select-sm" @bind="tempNewPlacement.ClubId">
+										<option value="0">-- Select Club --</option>
+										@foreach (var club in Clubs)
+										{
+											<option value="@club.club_id">@club.name</option>
+										}
+									</select>
+								</div>
+								<div class="col-md-3">
+									<label class="form-label-sm mb-0">Employee</label>
+									<select class="form-select form-select-sm" @bind="tempNewPlacement.EmployeeId">
+										<option value="0">-- Select Employee --</option>
+										@foreach (var employee in Employees.Where(e => tempNewPlacement.ClubId == 0 || e.club_id == tempNewPlacement.ClubId))
+										{
+											<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
+										}
+									</select>
+								</div>
+								<div class="col-md-1">
+									<label class="form-label-sm mb-0">Date</label>
+									<input type="date" class="form-control form-control-sm" @bind="tempNewPlacement.PlacementDate" />
+								</div>
+							</div>
+							<div class="d-flex justify-content-end mt-2">
+								<button type="button" class="btn btn-sm btn-danger me-2" @onclick="CancelAddPlacement">
+									<i class="bi bi-x"></i> Cancel
+								</button>
+								<button type="button" class="btn btn-sm btn-success" @onclick="ConfirmAddPlacement"
+										disabled="@(!IsValidPlacement())">
 									<i class="bi bi-check"></i> Confirm
 								</button>
 							</div>
@@ -155,12 +225,11 @@
 								<tr>
 									<th style="width: 20%;" class="small">Equipment</th>
 									<th style="width: 10%;" class="small">Category</th>
-									<th style="width: 10%;" class="small">Type</th>
 									<th style="width: 10%;" class="small">Brand</th>
 									<th style="width: 8%;" class="small">Quantity</th>
 									<th style="width: 8%;" class="small">Price</th>
 									<th style="width: 8%;" class="small">Total</th>
-									<th style="width: 10%;" class="small">Status</th>
+									<th style="width: 20%;" class="small">Placement Status</th>
 									<th style="width: 16%;" class="small">Actions</th>
 								</tr>
 							</thead>
@@ -173,8 +242,9 @@
 									var remainingQty = item.Quantity - placedQty;
 									var canDelete = !item.IsExisting || (item.IsExisting && placedQty == 0);
 									var canEdit = !item.IsExisting || (item.IsExisting && placedQty == 0);
+									var hasPlacement = placements.Any();
 
-									<tr class="@(item.IsExisting ? "table-light" : "")">
+									<tr class="@(item.IsExisting ? (hasPlacement ? "table-light" : "") : "")">
 										<td>
 											<div class="small fw-medium">
 												@if (equipment != null)
@@ -197,19 +267,16 @@
 										<td class="small">
 											@if (equipment != null)
 											{
-												@GetTypeName(equipment.type_id)
-											}
-										</td>
-										<td class="small">
-											@if (equipment != null)
-											{
 												@GetBrandName(equipment.brand_id)
 											}
 										</td>
 										<td>
-											@if (canEdit)
+											@if (canEdit && !IsOrderReadOnly)
 											{
-												<InputNumber class="form-control form-control-sm py-0" @bind-Value="item.Quantity" min="1" />
+												<InputNumber class="form-control form-control-sm py-0"
+															 @bind-Value="item.Quantity"
+															 min="1"
+															 @onchange="() => ValidatePositiveNumber(item)" />
 											}
 											else
 											{
@@ -217,9 +284,12 @@
 											}
 										</td>
 										<td>
-											@if (canEdit)
+											@if (canEdit && !IsOrderReadOnly)
 											{
-												<InputNumber class="form-control form-control-sm py-0" @bind-Value="item.Price" step="0.01" min="0" />
+												<InputNumber class="form-control form-control-sm py-0"
+															 @bind-Value="item.Price"
+															 step="0.01" min="0.01"
+															 @onchange="() => ValidatePositivePrice(item)" />
 											}
 											else
 											{
@@ -236,11 +306,14 @@
 												}
 												else if (placedQty < item.Quantity)
 												{
-													<span class="badge bg-info">Partially Placed</span>
+													<div class="d-flex flex-column">
+														<span class="badge bg-info">Partially Placed (@placedQty / @item.Quantity)</span>
+														<span class="text-muted small mt-1">@remainingQty left to place</span>
+													</div>
 												}
 												else
 												{
-													<span class="badge bg-success">Placed</span>
+													<span class="badge bg-success">Fully Placed (@placedQty / @item.Quantity)</span>
 												}
 											}
 											else
@@ -249,58 +322,90 @@
 											}
 										</td>
 										<td>
-											@if (item.IsExisting && placements.Any())
-											{
-												<button type="button" class="btn btn-sm btn-info py-0 px-1"
-														data-bs-toggle="collapse" data-bs-target="#placement-@item.SuppliedEquipmentId">
-													<i class="bi bi-info-circle"></i> Placements
-												</button>
-
-												@if (canDelete)
+											<div class="d-flex flex-column gap-1">
+												@if (remainingQty > 0 && item.IsExisting && !IsOrderReadOnly)
 												{
-													<button type="button" class="btn btn-sm btn-danger py-0 px-1 ms-1" @onclick="() => RemoveEquipmentItem(item)">
-														<i class="bi bi-trash"></i>
+													<button type="button" class="btn btn-sm btn-success py-0 px-1"
+															@onclick="() => InitPlacement(item)" title="Create Placement">
+														<i class="bi bi-box-arrow-right"></i> Place
 													</button>
 												}
-											}
-											else if (canDelete)
-											{
-												<button type="button" class="btn btn-sm btn-danger py-0 px-1" @onclick="() => RemoveEquipmentItem(item)">
-													<i class="bi bi-trash"></i>
-												</button>
-											}
-											else
-											{
-												<span class="badge bg-warning text-dark">
-													Cannot modify<br>
-													(Already placed)
-												</span>
-											}
+
+												@if (item.IsExisting && placements.Any())
+												{
+													<button type="button" class="btn btn-sm btn-info py-0 px-1"
+															@onclick="() => ToggleDetails(item.SuppliedEquipmentId)" title="View Placements">
+														<i class="bi bi-info-circle"></i> Details
+													</button>
+												}
+
+												@if (canDelete && !IsOrderReadOnly)
+												{
+													<button type="button" class="btn btn-sm btn-danger py-0 px-1"
+															@onclick="() => ConfirmRemoveEquipmentItem(item)" title="Delete">
+														<i class="bi bi-trash"></i> Delete
+													</button>
+												}
+											</div>
 										</td>
 									</tr>
 									@if (item.IsExisting && placements.Any())
 									{
-										<tr class="collapse" id="placement-@item.SuppliedEquipmentId">
-											<td colspan="9" class="p-0">
-												<div class="bg-light p-2 border-top">
+										<tr class="@(IsExpanded(item.SuppliedEquipmentId) ? "d-table-row" : "d-none")">
+											<td colspan="8" class="p-0">
+												<div class="bg-light p-2 border-top position-relative">
+													<button type="button" class="btn-close position-absolute top-0 end-0 mt-1 me-1"
+															@onclick="() => ToggleDetails(item.SuppliedEquipmentId)"
+															aria-label="Close">
+													</button>
 													<h6 class="small mb-1">Placement Details:</h6>
-													<div class="row g-1">
-														@foreach (var placement in placements)
-														{
-															<div class="col-md-4">
-																<div class="border p-1 rounded small">
-																	<div><strong>Date:</strong> @placement.placement_date.ToString("g")</div>
-																	<div><strong>Quantity:</strong> @placement.quantity units</div>
-																	<div><strong>Employee:</strong> @GetEmployeeName(placement.employee_id)</div>
-																	<div><strong>Club:</strong> @GetClubName(GetEmployeeClubId(placement.employee_id))</div>
-																</div>
-															</div>
-														}
+													<div class="table-responsive">
+														<table class="table table-sm mb-0">
+															<thead>
+																<tr>
+																	<th class="small">Date</th>
+																	<th class="small">Quantity</th>
+																	<th class="small">Employee</th>
+																	<th class="small">Club</th>
+																	<th class="small">Actions</th>
+																</tr>
+															</thead>
+															<tbody>
+																@foreach (var placement in placements)
+																{
+																	var employee = Employees.FirstOrDefault(e => e.employee_id == placement.employee_id);
+
+																	<tr>
+																		<td class="small">@placement.placement_date.ToString("yyyy-MM-dd HH:mm")</td>
+																		<td class="small">@placement.quantity units</td>
+																		<td class="small">@GetEmployeeName(placement.employee_id)</td>
+																		<td class="small">
+																			@if (employee != null)
+																			{
+																				@GetClubName(employee.club_id)
+																			}
+																		</td>
+																		<td>
+																			@if (!IsOrderReadOnly)
+																			{
+																				<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1"
+																						@onclick="() => ConfirmRemovePlacement(placement)" title="Delete Placement">
+																					<i class="bi bi-trash"></i> Remove
+																				</button>
+																			}
+																		</td>
+																	</tr>
+																}
+															</tbody>
+														</table>
 													</div>
-													@if (remainingQty > 0)
+													@if (remainingQty > 0 && !IsOrderReadOnly)
 													{
 														<div class="mt-1">
-															<span class="badge bg-warning text-dark">@remainingQty units remaining to be placed</span>
+															<button type="button" class="btn btn-sm btn-outline-success py-0 px-1"
+																	@onclick="() => InitPlacement(item)" title="Add More Placement">
+																<i class="bi bi-plus-circle"></i> Add Placement (@remainingQty units remaining)
+															</button>
 														</div>
 													}
 												</div>
@@ -311,77 +416,11 @@
 							</tbody>
 							<tfoot>
 								<tr>
-									<td colspan="6" class="text-end fw-bold small">Total Order Amount:</td>
+									<td colspan="5" class="text-end fw-bold small">Total Order Amount:</td>
 									<td colspan="3" class="fw-bold small">@Order.SuppliedEquipmentItems.Sum(i => i.Quantity * i.Price).ToString("C2")</td>
 								</tr>
 							</tfoot>
 						</table>
-					</div>
-				</div>
-			</div>
-
-			<!-- Storage Locations -->
-			<div class="card card-compact mt-2">
-				<div class="card-header bg-primary text-white py-1 d-flex justify-content-between align-items-center">
-					<h6 class="mb-0">Placement Summary</h6>
-					<button class="btn btn-sm btn-link p-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#placementSummaryCollapse">
-						<i class="bi bi-chevron-down"></i>
-					</button>
-				</div>
-				<div class="collapse show" id="placementSummaryCollapse">
-					<div class="card-body p-2">
-						@if (relatedProductPlacements.Any())
-						{
-							<div class="table-responsive">
-								<table class="table table-sm mb-0">
-									<thead>
-										<tr>
-											<th class="small">Placement Date</th>
-											<th class="small">Equipment</th>
-											<th class="small">Quantity</th>
-											<th class="small">Employee</th>
-											<th class="small">Club</th>
-										</tr>
-									</thead>
-									<tbody>
-										@foreach (var groupedPlacement in relatedProductPlacements.GroupBy(p => p.placement_date.Date))
-										{
-											<tr class="table-secondary">
-												<td colspan="5" class="small fw-bold py-1">
-													@groupedPlacement.Key.ToShortDateString() (@groupedPlacement.Count() placements)
-												</td>
-											</tr>
-
-											@foreach (var placement in groupedPlacement)
-											{
-												var suppliedEquipment = Order.SuppliedEquipmentItems
-												.FirstOrDefault(se => se.SuppliedEquipmentId == placement.supplied_equipment_id);
-												var availableEquipment = AvailableEquipmentList
-												.FirstOrDefault(ae => ae.available_id == placement.available_id);
-												var employee = Employees.FirstOrDefault(e => e.employee_id == placement.employee_id);
-
-												<tr>
-													<td class="small">@placement.placement_date.ToShortTimeString()</td>
-													<td class="small">@(suppliedEquipment?.EquipmentName ?? "Unknown")</td>
-													<td class="small">@placement.quantity</td>
-													<td class="small">@GetEmployeeName(placement.employee_id)</td>
-													<td class="small">
-														@if (employee != null)
-														{
-															@GetClubName(employee.club_id)
-														}
-													</td>
-												</tr>
-											}
-										}
-									</tbody>
-								</table>
-							</div>
-						}
-						else
-						{
-							<p class="text-muted small">No product placements found for this order.</p>
-						}
 					</div>
 				</div>
 			</div>
@@ -396,6 +435,38 @@
 </div>
 
 @code {
+	[Parameter]
+	public string OrderStatus { get; set; } = "";
+
+	// Helper properties
+	private bool IsOrderReadOnly => OrderStatus == SupplyOrderStatuses.Cancelled || OrderStatus == SupplyOrderStatuses.Completed;
+
+	// Temporary storage for new placement
+	private PlacementViewModel? tempNewPlacement = null;
+	private int tempMaxPlacementQuantity = 0;
+
+	// List of supplied equipment items that can be placed
+	private List<SuppliedEquipmentViewModel> availableItemsForPlacement =>
+		Order.SuppliedEquipmentItems
+			.Where(item => item.IsExisting && GetRemainingQuantity(item) > 0)
+			.ToList();
+
+	private class PlacementViewModel
+	{
+		public int PlacementId { get; set; }
+		public int SuppliedEquipmentId { get; set; }
+		public int AvailableId { get; set; }
+		public int EmployeeId { get; set; }
+		public int ClubId { get; set; }
+		public int Quantity { get; set; }
+		public DateTime PlacementDate { get; set; } = DateTime.Today;
+	}
+
+	// Track expanded details
+	private Dictionary<int, bool> expandedDetails = new();
+
+	private string confirmDeleteMessage = "";
+	private Func<Task>? deleteAction;
 	[Parameter]
 	public SupplyOrderViewModel Order { get; set; } = null!;
 
@@ -574,8 +645,14 @@
 		tempSelectedEquipment = null;
 	}
 
-	private void RemoveEquipmentItem(SuppliedEquipmentViewModel item)
+	private async Task RemoveEquipmentItem(SuppliedEquipmentViewModel item)
 	{
+		if (IsOrderReadOnly)
+		{
+			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			return;
+		}
+
 		// Check if item can be removed (not existing or no placements)
 		var placements = relatedProductPlacements.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId).ToList();
 
@@ -587,6 +664,414 @@
 		else
 		{
 			Snackbar.Add("Cannot remove equipment that has been placed", MudBlazor.Severity.Error);
+		}
+	}
+
+
+	private void ToggleDetails(int suppliedEquipmentId)
+	{
+		if (expandedDetails.ContainsKey(suppliedEquipmentId))
+			expandedDetails[suppliedEquipmentId] = !expandedDetails[suppliedEquipmentId];
+		else
+			expandedDetails[suppliedEquipmentId] = true;
+	}
+
+	private void ValidatePositiveNumber(SuppliedEquipmentViewModel item)
+	{
+		if (item.Quantity <= 0)
+		{
+			item.Quantity = 1;
+			Snackbar.Add("Quantity must be greater than 0", MudBlazor.Severity.Warning);
+		}
+	}
+
+	private void ValidatePositivePrice(SuppliedEquipmentViewModel item)
+	{
+		if (item.Price <= 0)
+		{
+			item.Price = 0.01m;
+			Snackbar.Add("Price must be greater than 0", MudBlazor.Severity.Warning);
+		}
+	}
+
+	private bool IsExpanded(int suppliedEquipmentId)
+	{
+		return expandedDetails.ContainsKey(suppliedEquipmentId) && expandedDetails[suppliedEquipmentId];
+	}
+
+	private int GetRemainingQuantity(SuppliedEquipmentViewModel item)
+	{
+		var placements = relatedProductPlacements.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId).ToList();
+		var placedQty = placements.Sum(p => p.quantity);
+		return item.Quantity - placedQty;
+	}
+
+	private async Task ConfirmRemoveEquipmentItem(SuppliedEquipmentViewModel item)
+	{
+		if (IsOrderReadOnly)
+		{
+			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		// Check if item can be removed (not existing or no placements)
+		var placements = relatedProductPlacements.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId).ToList();
+
+		if (!item.IsExisting || (item.IsExisting && !placements.Any()))
+		{
+			// Display confirmation dialog without JavaScript
+			var result = await DialogService.ShowMessageBox(
+				"Confirm Delete",
+				$"Are you sure you want to remove {item.EquipmentName} from this order?",
+				yesText: "Yes",
+				noText: "No");
+
+			if (result == true)
+			{
+				await RemoveEquipmentItem(item);
+			}
+		}
+		else
+		{
+			Snackbar.Add("Cannot remove equipment that has been placed", MudBlazor.Severity.Error);
+		}
+	}
+
+	private async Task ExecuteDelete()
+	{
+		if (deleteAction != null)
+		{
+			await deleteAction();
+			deleteAction = null;
+		}
+	}
+
+	// Placement management methods
+	private void AddPlacementItem()
+	{
+		if (IsOrderReadOnly)
+		{
+			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		if (!availableItemsForPlacement.Any())
+		{
+			Snackbar.Add("No equipment items available for placement", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		tempNewPlacement = new PlacementViewModel
+			{
+				PlacementId = 0,
+				SuppliedEquipmentId = 0,
+				ClubId = 0,
+				EmployeeId = 0,
+				Quantity = 1,
+				PlacementDate = DateTime.Today
+			};
+	}
+
+	private void InitPlacement(SuppliedEquipmentViewModel item)
+	{
+		if (IsOrderReadOnly)
+		{
+			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		var remainingQty = GetRemainingQuantity(item);
+		if (remainingQty <= 0)
+		{
+			Snackbar.Add("No quantity remaining for placement", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		tempNewPlacement = new PlacementViewModel
+			{
+				PlacementId = 0,
+				SuppliedEquipmentId = item.SuppliedEquipmentId,
+				ClubId = 0,
+				EmployeeId = 0,
+				Quantity = 1,
+				PlacementDate = DateTime.Today
+			};
+
+		UpdatePlacementDetails();
+	}
+
+	private void UpdatePlacementDetails()
+	{
+		if (tempNewPlacement != null && tempNewPlacement.SuppliedEquipmentId > 0)
+		{
+			var selectedItem = Order.SuppliedEquipmentItems.FirstOrDefault(se => se.SuppliedEquipmentId == tempNewPlacement.SuppliedEquipmentId);
+			if (selectedItem != null)
+			{
+				tempMaxPlacementQuantity = GetRemainingQuantity(selectedItem);
+				if (tempNewPlacement.Quantity > tempMaxPlacementQuantity)
+				{
+					tempNewPlacement.Quantity = tempMaxPlacementQuantity > 0 ? tempMaxPlacementQuantity : 1;
+				}
+			}
+		}
+	}
+
+	private bool IsValidPlacement()
+	{
+		if (tempNewPlacement == null) return false;
+
+		return tempNewPlacement.SuppliedEquipmentId > 0 &&
+						tempNewPlacement.ClubId > 0 &&
+						tempNewPlacement.EmployeeId > 0 &&
+						tempNewPlacement.Quantity > 0 &&
+						tempNewPlacement.Quantity <= tempMaxPlacementQuantity &&
+						tempNewPlacement.PlacementDate != default;
+	}
+
+	private async Task ConfirmAddPlacement()
+	{
+		if (IsOrderReadOnly)
+		{
+			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			return;
+		}
+		if (!IsValidPlacement())
+		{
+			Snackbar.Add("Please fill in all required placement fields", MudBlazor.Severity.Warning);
+			return;
+		}
+		try
+		{
+			// Get the item we're placing
+			var suppliedItem = Order.SuppliedEquipmentItems
+				.FirstOrDefault(se => se.SuppliedEquipmentId == tempNewPlacement.SuppliedEquipmentId);
+			if (suppliedItem == null)
+			{
+				Snackbar.Add("Supplied equipment not found", MudBlazor.Severity.Error);
+				return;
+			}
+
+			// ВАЖНО: Получаем или создаем запись AvailableEquipment только один раз
+			int availableId = await CreateOrGetAvailableEquipment(tempNewPlacement);
+
+			// Проверим, не существует ли уже такое размещение
+			bool placementExists = ProductPlacements.Any(p =>
+				p.supplied_equipment_id == tempNewPlacement.SuppliedEquipmentId &&
+				p.available_id == availableId &&
+				p.placement_date == tempNewPlacement.PlacementDate &&
+				p.quantity == tempNewPlacement.Quantity &&
+				p.employee_id == tempNewPlacement.EmployeeId);
+
+			if (placementExists)
+			{
+				Snackbar.Add("This placement already exists", MudBlazor.Severity.Warning);
+				tempNewPlacement = null;
+				return;
+			}
+
+			// Create a new ProductPlacement entity
+			var newPlacement = new ProductPlacement
+				{
+					placement_id = 0, // Will be assigned by database
+					placement_date = tempNewPlacement.PlacementDate,
+					quantity = tempNewPlacement.Quantity,
+					employee_id = tempNewPlacement.EmployeeId,
+					supplied_equipment_id = tempNewPlacement.SuppliedEquipmentId,
+					available_id = availableId, // Используем полученный available_id
+												// Добавляем поля для отслеживания создания и обновления
+					CreateDatetime = DateTime.Now,
+					UpdateDatetime = DateTime.Now
+				};
+
+			// Add to the list только если это новое размещение
+			// Добавляем в локальный список только если мы еще не добавили его
+			if (!ProductPlacements.Any(p => p.placement_id == 0 &&
+											p.supplied_equipment_id == newPlacement.supplied_equipment_id &&
+											p.available_id == newPlacement.available_id))
+			{
+				ProductPlacements.Add(newPlacement);
+			}
+
+			// Also add to the item's placements collection for tracking
+			var newPlacementViewModel = new UI.Components.Pages.SupplyOrders.SupplyOrdersList.PlacementViewModel
+				{
+					PlacementId = 0, // Will be assigned after save
+					PlacementDate = tempNewPlacement.PlacementDate,
+					Quantity = tempNewPlacement.Quantity,
+					EmployeeId = tempNewPlacement.EmployeeId,
+					ClubId = tempNewPlacement.ClubId,
+					ClubName = GetClubName(tempNewPlacement.ClubId),
+					EmployeeName = GetEmployeeName(tempNewPlacement.EmployeeId),
+					AvailableId = availableId,
+					IsExisting = false // Will be set to true after save
+				};
+
+			// Добавляем к визуальной модели только если такого размещения еще нет
+			if (suppliedItem.Placements == null)
+				suppliedItem.Placements = new List<UI.Components.Pages.SupplyOrders.SupplyOrdersList.PlacementViewModel>();
+
+			if (!suppliedItem.Placements.Any(p =>
+				p.EmployeeId == newPlacementViewModel.EmployeeId &&
+				p.ClubId == newPlacementViewModel.ClubId &&
+				p.Quantity == newPlacementViewModel.Quantity &&
+				p.PlacementDate == newPlacementViewModel.PlacementDate))
+			{
+				suppliedItem.Placements.Add(newPlacementViewModel);
+			}
+
+			tempNewPlacement = null;
+			Snackbar.Add("Placement created successfully", MudBlazor.Severity.Success);
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error creating placement: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+	private async Task<int> CreateOrGetAvailableEquipment(PlacementViewModel placement)
+	{
+		if (placement == null)
+			throw new ArgumentNullException(nameof(placement));
+
+		// Находим поставленное оборудование, чтобы узнать какой equipment_id использовать
+		var suppliedEquipment = Order.SuppliedEquipmentItems
+			.FirstOrDefault(se => se.SuppliedEquipmentId == placement.SuppliedEquipmentId);
+
+		if (suppliedEquipment == null)
+			throw new InvalidOperationException("Supplied equipment not found");
+
+		// Поиск существующей записи available_equipment для данного equipment_id и club_id
+		var existingAvailable = AvailableEquipmentList
+			.FirstOrDefault(ae => ae.equipment_id == suppliedEquipment.EquipmentId && ae.club_id == placement.ClubId);
+
+		// Если запись уже существует
+		if (existingAvailable != null)
+		{
+			// Обновляем количество
+			existingAvailable.available_quantity += placement.Quantity;
+
+			try
+			{
+				// Обновляем запись
+				var response = await ApiFacade.AvailableEquipmentApiService.Update(existingAvailable.available_id, existingAvailable);
+				if (!response.IsSuccessStatusCode)
+				{
+					throw new Exception($"Failed to update available equipment: {response.StatusCode}");
+				}
+				return existingAvailable.available_id;
+			}
+			catch (Exception ex)
+			{
+				Snackbar.Add($"Error updating available equipment: {ex.Message}", MudBlazor.Severity.Error);
+				throw;
+			}
+		}
+		else
+		{
+			// Создаем новую запись available_equipment
+			var newAvailable = new AvailableEquipment
+				{
+					equipment_id = suppliedEquipment.EquipmentId,
+					club_id = placement.ClubId,
+					available_quantity = placement.Quantity,
+					rental_price = suppliedEquipment.Price * 1.5m, // Наценка для аренды
+					CreateDatetime = DateTime.Now,
+					UpdateDatetime = DateTime.Now
+				};
+
+			try
+			{
+				// Добавляем новую запись
+				var response = await ApiFacade.AvailableEquipmentApiService.Create(newAvailable);
+				if (!response.IsSuccessStatusCode || response.Content == null)
+				{
+					throw new Exception($"Failed to create available equipment: {response.StatusCode}");
+				}
+
+				// Добавляем в локальный кэш
+				AvailableEquipmentList.Add(response.Content);
+				return response.Content.available_id;
+			}
+			catch (Exception ex)
+			{
+				Snackbar.Add($"Error creating available equipment: {ex.Message}", MudBlazor.Severity.Error);
+				throw;
+			}
+		}
+	}
+	private void CancelAddPlacement()
+	{
+		tempNewPlacement = null;
+		tempMaxPlacementQuantity = 0;
+	}
+
+	private async Task ConfirmRemovePlacement(ProductPlacement placement)
+	{
+		var availableEquipment = AvailableEquipmentList
+			.FirstOrDefault(ae => ae.available_id == placement.available_id);
+
+		var equipment = EquipmentList
+			.FirstOrDefault(e => e.equipment_id == availableEquipment?.equipment_id);
+
+		if (equipment != null)
+		{
+			var result = await DialogService.ShowMessageBox(
+				"Confirm Delete",
+				$"Are you sure you want to remove this placement for {equipment.name}?",
+				yesText: "Yes",
+				noText: "No");
+
+			if (result == true)
+			{
+				await RemovePlacement(placement);
+			}
+		}
+		else
+		{
+			Snackbar.Add("Equipment not found for this placement.", MudBlazor.Severity.Error);
+		}
+	}
+	private async Task RemovePlacement(ProductPlacement placement)
+	{
+		try
+		{
+			// Find and update the corresponding available equipment
+			var availableEquipment = AvailableEquipmentList
+				.FirstOrDefault(ae => ae.available_id == placement.available_id);
+
+			if (availableEquipment != null)
+			{
+				availableEquipment.available_quantity -= placement.quantity;
+
+				// If quantity becomes zero or negative, we might want to remove it entirely
+				if (availableEquipment.available_quantity <= 0)
+				{
+					AvailableEquipmentList.Remove(availableEquipment);
+				}
+			}
+
+			// Remove from the related item's placements collection
+			var suppliedItem = Order.SuppliedEquipmentItems
+				.FirstOrDefault(se => se.SuppliedEquipmentId == placement.supplied_equipment_id);
+
+			if (suppliedItem != null && suppliedItem.Placements != null)
+			{
+				var placementViewModel = suppliedItem.Placements
+					.FirstOrDefault(p => p.PlacementId == placement.placement_id);
+
+				if (placementViewModel != null)
+				{
+					suppliedItem.Placements.Remove(placementViewModel);
+				}
+			}
+
+			// Remove the placement
+			ProductPlacements.Remove(placement);
+			// await OnItemsChanged.InvokeAsync();
+			Snackbar.Add("Placement removed successfully", MudBlazor.Severity.Success);
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error removing placement: {ex.Message}", MudBlazor.Severity.Error);
 		}
 	}
 }
