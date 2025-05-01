@@ -1034,22 +1034,57 @@
 	{
 		try
 		{
-			// Find and update the corresponding available equipment
+			// Знаходимо відповідне доступне обладнання
 			var availableEquipment = AvailableEquipmentList
 				.FirstOrDefault(ae => ae.available_id == placement.available_id);
 
 			if (availableEquipment != null)
 			{
+				// Зменшуємо кількість
 				availableEquipment.available_quantity -= placement.quantity;
 
-				// If quantity becomes zero or negative, we might want to remove it entirely
-				if (availableEquipment.available_quantity <= 0)
+				// Оновлюємо запис в базі даних
+				if (availableEquipment.available_quantity > 0)
 				{
+					var updateResponse = await ApiFacade.AvailableEquipmentApiService.Update(
+						availableEquipment.available_id, availableEquipment);
+
+					if (!updateResponse.IsSuccessStatusCode)
+					{
+						Snackbar.Add("Не вдалося оновити доступне обладнання.", MudBlazor.Severity.Error);
+						return;
+					}
+				}
+				else
+				{
+					// Якщо кількість стала нульовою або від'ємною, видаляємо запис
+					var deleteResponse = await ApiFacade.AvailableEquipmentApiService.Delete(
+						availableEquipment.available_id);
+
+					if (!deleteResponse.IsSuccessStatusCode)
+					{
+						Snackbar.Add("Не вдалося видалити запис доступного обладнання.", MudBlazor.Severity.Error);
+						return;
+					}
+
+					// Видаляємо з локальної колекції
 					AvailableEquipmentList.Remove(availableEquipment);
 				}
 			}
 
-			// Remove from the related item's placements collection
+			// Видаляємо розміщення з бази даних
+			if (placement.placement_id > 0)
+			{
+				var deletePlacementResponse = await ApiFacade.ProductPlacementApiService.Delete(placement.placement_id);
+
+				if (!deletePlacementResponse.IsSuccessStatusCode)
+				{
+					Snackbar.Add("Не вдалося видалити розміщення.", MudBlazor.Severity.Error);
+					return;
+				}
+			}
+
+			// Оновлюємо локальні колекції
 			var suppliedItem = Order.SuppliedEquipmentItems
 				.FirstOrDefault(se => se.SuppliedEquipmentId == placement.supplied_equipment_id);
 
@@ -1064,14 +1099,15 @@
 				}
 			}
 
-			// Remove the placement
+			// Видаляємо розміщення з локальної колекції
 			ProductPlacements.Remove(placement);
-			// await OnItemsChanged.InvokeAsync();
-			Snackbar.Add("Placement removed successfully", MudBlazor.Severity.Success);
+
+			await OnSave.InvokeAsync();
+			Snackbar.Add("Розміщення успішно видалено", MudBlazor.Severity.Success);
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Error removing placement: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add($"Помилка при видаленні розміщення: {ex.Message}", MudBlazor.Severity.Error);
 		}
 	}
 }
