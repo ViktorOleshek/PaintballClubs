@@ -1,0 +1,417 @@
+﻿@page "/suppliers"
+@using Domain.Entities
+@using UI.Components.Pages.SupplyOrders.Component
+@using Services.ExternalApi.Facade
+@using System.ComponentModel.DataAnnotations
+@inject IApiFacade ApiFacade
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject MudBlazor.ISnackbar Snackbar
+
+<h3>Список постачальників</h3>
+
+<div class="card mb-3">
+	<div class="card-header">
+		<div class="d-flex justify-content-between align-items-center mb-2">
+			<h5 class="mb-0">Фільтри</h5>
+			<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
+				<i class="bi bi-plus-circle"></i> Додати постачальника
+			</button>
+		</div>
+		<div class="row g-2">
+			<div class="col-md-3">
+				<div class="input-group input-group-sm">
+					<span class="input-group-text">Назва</span>
+					<input type="text" class="form-control" @bind="searchQuery" @bind:event="oninput"
+						   placeholder="Фільтр за назвою">
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="input-group input-group-sm">
+					<span class="input-group-text">Телефон</span>
+					<input type="text" class="form-control" @bind="phoneFilter" @bind:event="oninput"
+						   placeholder="Фільтр за телефоном">
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="input-group input-group-sm">
+					<span class="input-group-text">Email</span>
+					<input type="text" class="form-control" @bind="emailFilter" @bind:event="oninput"
+						   placeholder="Фільтр за email">
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="input-group input-group-sm">
+					<span class="input-group-text">Адреса</span>
+					<input type="text" class="form-control" @bind="addressFilter" @bind:event="oninput"
+						   placeholder="Фільтр за адресою">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+@if (showAddNewForm)
+{
+	<div class="card mb-3">
+		<div class="card-header d-flex justify-content-between">
+			<span>Додати нового постачальника</span>
+			<button type="button" class="btn-close" @onclick="ToggleAddNewForm"></button>
+		</div>
+		<div class="card-body">
+			<EditForm Model="newSupplier" OnValidSubmit="AddNewSupplier">
+				<DataAnnotationsValidator />
+				<ValidationSummary class="text-danger mb-3" />
+
+				<div class="row g-2">
+					<div class="col-md-6">
+						<label class="form-label">Назва</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newSupplier.name" />
+						<ValidationMessage For="@(() => newSupplier.name)" class="text-danger small" />
+					</div>
+					<div class="col-md-6">
+						<label class="form-label">Номер телефону</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newSupplier.phone_number" />
+						<ValidationMessage For="@(() => newSupplier.phone_number)" class="text-danger small" />
+					</div>
+					<div class="col-md-6">
+						<label class="form-label">Email</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newSupplier.email" />
+						<ValidationMessage For="@(() => newSupplier.email)" class="text-danger small" />
+					</div>
+					<div class="col-md-6">
+						<label class="form-label">Адреса</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newSupplier.address" />
+						<ValidationMessage For="@(() => newSupplier.address)" class="text-danger small" />
+					</div>
+					<div class="col-12">
+						<div class="d-flex justify-content-end gap-2">
+							<button type="button" class="btn btn-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
+							<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+						</div>
+					</div>
+				</div>
+			</EditForm>
+		</div>
+	</div>
+}
+
+<div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+	<table class="table table-striped table-hover table-sm">
+		<thead class="sticky-top bg-light">
+			<tr>
+				<th>Назва</th>
+				<th>Телефон</th>
+				<th>Email</th>
+				<th>Адреса</th>
+				<th>Дії</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var supplier in PaginatedSuppliers)
+			{
+				<tr>
+					<td>
+						@if (editingSupplier?.supplier_id == supplier.supplier_id)
+						{
+							<EditForm Model="editingSupplier" OnValidSubmit="SaveSupplier">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingSupplier.name" />
+								<ValidationMessage For="@(() => editingSupplier.name)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@supplier.name
+						}
+					</td>
+					<td>
+						@if (editingSupplier?.supplier_id == supplier.supplier_id)
+						{
+							<EditForm Model="editingSupplier" OnValidSubmit="SaveSupplier">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingSupplier.phone_number" />
+								<ValidationMessage For="@(() => editingSupplier.phone_number)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@supplier.phone_number
+						}
+					</td>
+					<td>
+						@if (editingSupplier?.supplier_id == supplier.supplier_id)
+						{
+							<EditForm Model="editingSupplier" OnValidSubmit="SaveSupplier">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingSupplier.email" />
+								<ValidationMessage For="@(() => editingSupplier.email)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@supplier.email
+						}
+					</td>
+					<td>
+						@if (editingSupplier?.supplier_id == supplier.supplier_id)
+						{
+							<EditForm Model="editingSupplier" OnValidSubmit="SaveSupplier">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingSupplier.address" />
+								<ValidationMessage For="@(() => editingSupplier.address)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@supplier.address
+						}
+					</td>
+					<td>
+						@if (editingSupplier?.supplier_id == supplier.supplier_id)
+						{
+							<div class="btn-group btn-group-sm">
+								<button class="btn btn-success btn-sm" @onclick="SaveSupplier">
+									<i class="bi bi-check"></i> Зберегти
+								</button>
+								<button class="btn btn-secondary btn-sm" @onclick="CancelEditing">
+									<i class="bi bi-x"></i> Скасувати
+								</button>
+							</div>
+						}
+						else
+						{
+							<div class="btn-group btn-group-sm">
+								<button class="btn btn-primary btn-sm" @onclick="() => EditSupplier(supplier)">
+									<i class="bi bi-pencil"></i> Ред.
+								</button>
+								<button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(supplier)">
+									<i class="bi bi-trash"></i> Видал.
+								</button>
+							</div>
+						}
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+</div>
+
+@if (suppliers.Count == 0)
+{
+	<div class="alert alert-info">Постачальників не знайдено.</div>
+}
+
+<PaginationControl CurrentPage="currentPage"
+				   PageSize="pageSize"
+				   TotalItems="FilteredSuppliers.Count()"
+				   TotalPages="TotalPages"
+				   OnPageChanged="GoToPage"
+				   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
+
+@if (showDeleteConfirmation)
+{
+	<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Підтвердження видалення</h5>
+					<button type="button" class="btn-close" @onclick="CancelDelete"></button>
+				</div>
+				<div class="modal-body">
+					<p>Ви впевнені, що хочете видалити постачальника "@supplierToDelete?.name"?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" @onclick="CancelDelete">Скасувати</button>
+					<button type="button" class="btn btn-danger" @onclick="DeleteSupplier">Видалити</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+@code {
+	// Pagination parameters
+	private int currentPage = 1;
+	private int pageSize = 10;
+	// Filter parameters
+	private string searchQuery = "";
+	private string phoneFilter = "";
+	private string emailFilter = "";
+	private string addressFilter = "";
+	private List<Supplier> suppliers = new();
+	private Supplier? editingSupplier;
+	private Supplier? supplierToDelete;
+	private bool showDeleteConfirmation = false;
+	private bool showAddNewForm = false;
+	private Supplier newSupplier = new() { CreateDatetime = DateTime.Now };
+
+	private IEnumerable<Supplier> FilteredSuppliers =>
+		suppliers.Where(s =>
+			(string.IsNullOrWhiteSpace(searchQuery) ||
+				s.name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+			(string.IsNullOrWhiteSpace(phoneFilter) ||
+				(s.phone_number != null && s.phone_number.Contains(phoneFilter, StringComparison.OrdinalIgnoreCase))) &&
+			(string.IsNullOrWhiteSpace(emailFilter) ||
+				(s.email != null && s.email.Contains(emailFilter, StringComparison.OrdinalIgnoreCase))) &&
+			(string.IsNullOrWhiteSpace(addressFilter) ||
+				(s.address != null && s.address.Contains(addressFilter, StringComparison.OrdinalIgnoreCase)))
+		);
+
+	private IEnumerable<Supplier> PaginatedSuppliers =>
+		FilteredSuppliers.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+	private int TotalPages => (int)Math.Ceiling(FilteredSuppliers.Count() / (double)pageSize);
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadData();
+	}
+
+	private async Task LoadData()
+	{
+		try
+		{
+			var suppliersResponse = await ApiFacade.SuppliersApiService.Get();
+			if (!suppliersResponse.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Не вдалося завантажити дані постачальників. Оновіть сторінку.", MudBlazor.Severity.Error);
+				return;
+			}
+			suppliers = suppliersResponse.Content.ToList();
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка завантаження даних: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	private void GoToPage(int page)
+	{
+		if (page < 1 || page > TotalPages)
+			return;
+		currentPage = page;
+	}
+
+	private void EditSupplier(Supplier supplier)
+	{
+		editingSupplier = new Supplier
+			{
+				supplier_id = supplier.supplier_id,
+				name = supplier.name,
+				phone_number = supplier.phone_number,
+				email = supplier.email,
+				address = supplier.address,
+				CreateDatetime = supplier.CreateDatetime,
+				UpdateDatetime = DateTime.Now
+			};
+	}
+
+	private void CancelEditing()
+	{
+		editingSupplier = null;
+	}
+
+	private async Task SaveSupplier()
+	{
+		if (editingSupplier == null) return;
+
+		try
+		{
+			editingSupplier.UpdateDatetime = DateTime.Now;
+			var response = await ApiFacade.SuppliersApiService.Update(editingSupplier.supplier_id, editingSupplier);
+			if (response.IsSuccessStatusCode)
+			{
+				// Update the local list
+				var index = suppliers.FindIndex(s => s.supplier_id == editingSupplier.supplier_id);
+				if (index >= 0)
+				{
+					suppliers[index] = editingSupplier;
+				}
+				Snackbar.Add("Постачальника успішно оновлено", MudBlazor.Severity.Success);
+				editingSupplier = null;
+			}
+			else
+			{
+				Snackbar.Add($"Не вдалось оновити постачальника: {response.Error}", MudBlazor.Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка оновлення постачальника: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	private void ConfirmDelete(Supplier supplier)
+	{
+		supplierToDelete = supplier;
+		showDeleteConfirmation = true;
+	}
+
+	private void CancelDelete()
+	{
+		supplierToDelete = null;
+		showDeleteConfirmation = false;
+	}
+
+	private async Task DeleteSupplier()
+	{
+		if (supplierToDelete == null) return;
+		try
+		{
+			var response = await ApiFacade.SuppliersApiService.Delete(supplierToDelete.supplier_id);
+			if (response.IsSuccessStatusCode)
+			{
+				suppliers.RemoveAll(s => s.supplier_id == supplierToDelete.supplier_id);
+				Snackbar.Add("Постачальника успішно видалено", MudBlazor.Severity.Success);
+			}
+			else
+			{
+				Snackbar.Add($"Не вдалось видалити постачальника: {response.Error}", MudBlazor.Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка видалення постачальника: {ex.Message}", MudBlazor.Severity.Error);
+		}
+		finally
+		{
+			supplierToDelete = null;
+			showDeleteConfirmation = false;
+		}
+	}
+
+	private void ToggleAddNewForm()
+	{
+		showAddNewForm = !showAddNewForm;
+		if (showAddNewForm)
+		{
+			// Reset new supplier object
+			newSupplier = new Supplier { CreateDatetime = DateTime.Now };
+		}
+	}
+
+	private async Task AddNewSupplier()
+	{
+		try
+		{
+			newSupplier.CreateDatetime = DateTime.Now;
+			var response = await ApiFacade.SuppliersApiService.Create(newSupplier);
+			if (response.IsSuccessStatusCode)
+			{
+				// Add the new supplier to the list
+				suppliers.Add(response.Content);
+				Snackbar.Add("Постачальника успішно додано", MudBlazor.Severity.Success);
+				showAddNewForm = false;
+			}
+			else
+			{
+				Snackbar.Add($"Не вдалось додати постачальника: {response.Error}", MudBlazor.Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка додавання постачальника: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+}
