@@ -61,7 +61,6 @@
 		<div class="card-body">
 			<EditForm Model="newOffer" OnValidSubmit="AddNewOffer">
 				<DataAnnotationsValidator />
-				<ValidationSummary class="text-danger mb-3" />
 
 				<div class="row g-2">
 					<div class="col-md-6">
@@ -152,9 +151,6 @@
 					{
 						<p class="card-text text-success fw-bold">@offer.price.ToString("C")</p>
 						<p class="card-text">@(string.IsNullOrEmpty(offer.description) ? "Опис відсутній" : offer.description)</p>
-						<p class="card-text text-muted small">
-							Створено: @(offer.CreateDatetime?.ToString("dd.MM.yyyy HH:mm") ?? "Дата невідома")
-						</p>
 					}
 				</div>
 			</div>

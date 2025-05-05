@@ -20,7 +20,7 @@
 				</button>
 			</div>
 			<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
-				<i class="bi bi-plus-circle"></i> Додати
+				<i class="bi bi-plus-circle"></i> Додати обладнання
 			</button>
 		</div>
 
@@ -96,6 +96,34 @@
 					</button>
 				</div>
 			</div>
+
+			<div class="row mt-2">
+				<div class="col-md-12">
+					<div class="btn-group btn-group-sm">
+						<span class="input-group-text">Сортування:</span>
+						<button class="btn @(sortField == "name" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort(" name")'>
+							Назва @(sortField == "name" ? (ascending ? "↑" : "↓") : "")
+						</button>
+						<button class="btn @(sortField == "brand" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort(" brand")'>
+							Бренд @(sortField == "brand" ? (ascending ? "↑" : "↓") : "")
+						</button>
+						<button class="btn @(sortField == "category" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort(" category")'>
+							Категорія @(sortField == "category" ? (ascending ? "↑" : "↓") : "")
+						</button>
+						<button class="btn @(sortField == "type" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort(" type")'>
+							Тип @(sortField == "type" ? (ascending ? "↑" : "↓") : "")
+						</button>
+						<button class="btn @(sortField == "model" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort(" model")'>
+							Модель @(sortField == "model" ? (ascending ? "↑" : "↓") : "")
+						</button>
+					</div>
+				</div>
+			</div>
 		}
 	</div>
 </div>
@@ -119,13 +147,15 @@
 							<ValidationMessage For="@(() => newEquipment.name)" class="text-danger small" />
 						</div>
 					</div>
+
 					<div class="col-md-4 col-lg-3">
 						<div class="mb-1">
-							<label class="form-label small mb-0">Модель</label>
+							<label class="form-label small mb-0">Модель*</label>
 							<InputText class="form-control form-control-sm py-1" @bind-Value="newEquipment.model" />
 							<ValidationMessage For="@(() => newEquipment.model)" class="text-danger small" />
 						</div>
 					</div>
+
 					<div class="col-md-4 col-lg-2">
 						<div class="mb-1">
 							<label class="form-label small mb-0">Бренд*</label>
@@ -138,6 +168,7 @@
 							<ValidationMessage For="@(() => newEquipment.brand_id)" class="text-danger small" />
 						</div>
 					</div>
+
 					<div class="col-md-4 col-lg-2">
 						<div class="mb-1">
 							<label class="form-label small mb-0">Категорія*</label>
@@ -150,6 +181,7 @@
 							<ValidationMessage For="@(() => newEquipment.category_id)" class="text-danger small" />
 						</div>
 					</div>
+
 					<div class="col-md-4 col-lg-2">
 						<div class="mb-1">
 							<label class="form-label small mb-0">Тип*</label>
@@ -162,6 +194,7 @@
 							<ValidationMessage For="@(() => newEquipment.type_id)" class="text-danger small" />
 						</div>
 					</div>
+
 					<div class="col-md-8 col-lg-10">
 						<div class="mb-1">
 							<label class="form-label small mb-0">Опис</label>
@@ -169,6 +202,7 @@
 							<ValidationMessage For="@(() => newEquipment.description)" class="text-danger small" />
 						</div>
 					</div>
+
 					<div class="col-md-4 col-lg-2">
 						<div class="d-flex justify-content-end gap-1 h-100 align-items-end">
 							<button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
@@ -280,9 +314,42 @@
 						{
 							<p class="card-text fs-6 mb-1 text-truncate" title="@equipment.description">@equipment.description</p>
 						}
-						<p class="card-text text-muted fs-6 mb-0">
-							@(equipment.CreateDatetime?.ToString("dd.MM.yy") ?? "Дата невідома")
-						</p>
+
+						@if (equipmentCounts.ContainsKey(equipment.equipment_id))
+						{
+							var count = equipmentCounts[equipment.equipment_id];
+							<div class="mt-2">
+								<button class="btn btn-sm btn-outline-info w-100" @onclick="() => ToggleEquipmentInfo(equipment.equipment_id)">
+									Кількість: @count.TotalCount шт.
+									<i class="bi @(selectedEquipmentId == equipment.equipment_id ? "bi-chevron-up" : "bi-chevron-down")"></i>
+								</button>
+
+								@if (selectedEquipmentId == equipment.equipment_id)
+								{
+									<div class="card mt-1 p-1 bg-light">
+										@if (count.ClubCounts.Any())
+										{
+											<div class="list-group list-group-flush small">
+												@foreach (var clubCount in count.ClubCounts.OrderByDescending(c => c.Count))
+												{
+													<div class="list-group-item py-1 px-2 d-flex justify-content-between">
+														<span title="@clubCount.ClubName" class="text-truncate">@clubCount.ClubName</span>
+														<span class="ms-1">
+															<strong>@clubCount.Count</strong> шт. /
+															<span class="text-success">@clubCount.RentalPrice.ToString("F2") грн</span>
+														</span>
+													</div>
+												}
+											</div>
+										}
+										else
+										{
+											<div class="text-center p-2 small">Немає в наявності в клубах</div>
+										}
+									</div>
+								}
+							</div>
+						}
 					}
 				</div>
 			</div>
@@ -334,6 +401,10 @@ else if (FilteredEquipments.Count() == 0)
 	private int currentPage = 1;
 	private int pageSize = 10;
 
+	// Додайте після змінних фільтрації
+	private string sortField = "name";
+	private bool ascending = true;
+
 	// Filter parameters
 	private string searchQuery = "";
 	private string modelFilter = "";
@@ -354,6 +425,33 @@ else if (FilteredEquipments.Count() == 0)
 	private bool showAddNewForm = false;
 	private Equipment newEquipment = new() { CreateDatetime = DateTime.Now };
 
+	private Dictionary<int, EquipmentCount> equipmentCounts = new();
+	private List<Club> clubs = new();
+	private List<AvailableEquipment> availableEquipments = new();
+	private int? selectedEquipmentId = null;
+
+	private void ToggleEquipmentInfo(int equipmentId)
+	{
+		if (selectedEquipmentId == equipmentId)
+			selectedEquipmentId = null;
+		else
+			selectedEquipmentId = equipmentId;
+	}
+
+	private class EquipmentCount
+	{
+		public int TotalCount { get; set; }
+		public List<ClubEquipmentCount> ClubCounts { get; set; } = new();
+	}
+
+	private class ClubEquipmentCount
+	{
+		public int ClubId { get; set; }
+		public string ClubName { get; set; } = "";
+		public int Count { get; set; }
+		public decimal RentalPrice { get; set; }
+	}
+
 	private IEnumerable<Equipment> FilteredEquipments =>
 		equipments.Where(e =>
 			(string.IsNullOrWhiteSpace(searchQuery) ||
@@ -367,7 +465,24 @@ else if (FilteredEquipments.Count() == 0)
 			(typeFilter == 0 || e.type_id == typeFilter) &&
 			(!dateFilter.HasValue ||
 				(e.CreateDatetime.HasValue && e.CreateDatetime.Value.Date == dateFilter.Value.Date))
-		);
+		).OrderBy(e => sortField switch
+		{
+			"name" => ascending ? e.name : null,
+			"brand" => ascending ? GetBrandName(e.brand_id) : null,
+			"category" => ascending ? GetCategoryName(e.category_id) : null,
+			"type" => ascending ? GetTypeName(e.type_id) : null,
+			"model" => ascending ? e.model : null,
+			_ => e.name
+		}).ThenBy(e => e.name)
+		.OrderByDescending(e => sortField switch
+		{
+			"name" => !ascending ? e.name : null,
+			"brand" => !ascending ? GetBrandName(e.brand_id) : null,
+			"category" => !ascending ? GetCategoryName(e.category_id) : null,
+			"type" => !ascending ? GetTypeName(e.type_id) : null,
+			"model" => !ascending ? e.model : null,
+			_ => null
+		});
 
 	private IEnumerable<Equipment> PaginatedEquipments =>
 		FilteredEquipments.Skip((currentPage - 1) * pageSize).Take(pageSize);
@@ -378,6 +493,19 @@ else if (FilteredEquipments.Count() == 0)
 	{
 		await LoadData();
 	}
+
+	private void ToggleSort(string field)
+{
+    if (sortField == field)
+    {
+        ascending = !ascending;
+    }
+    else
+    {
+        sortField = field;
+        ascending = true;
+    }
+}
 
 	private async Task LoadData()
 	{
@@ -412,10 +540,55 @@ else if (FilteredEquipments.Count() == 0)
 			{
 				types = typesResponse.Content.ToList();
 			}
+
+			var clubsResponse = await ApiFacade.ClubApiService.Get();
+			if (clubsResponse.IsSuccessStatusCode)
+			{
+				clubs = clubsResponse.Content.ToList();
+			}
+
+			// Load available equipment
+			var availableResponse = await ApiFacade.AvailableEquipmentApiService.Get();
+			if (availableResponse.IsSuccessStatusCode)
+			{
+				availableEquipments = availableResponse.Content.ToList();
+				CalculateEquipmentCounts();
+			}
 		}
 		catch (Exception ex)
 		{
 			Snackbar.Add($"Помилка завантаження даних: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	private void CalculateEquipmentCounts()
+	{
+		equipmentCounts.Clear();
+
+		foreach (var equipment in equipments)
+		{
+			equipmentCounts[equipment.equipment_id] = new EquipmentCount();
+		}
+
+		foreach (var available in availableEquipments)
+		{
+			if (!equipmentCounts.ContainsKey(available.equipment_id))
+				continue;
+
+			var count = equipmentCounts[available.equipment_id];
+			count.TotalCount += available.available_quantity;
+
+			var club = clubs.FirstOrDefault(c => c.club_id == available.club_id);
+			if (club != null)
+			{
+				count.ClubCounts.Add(new ClubEquipmentCount
+					{
+						ClubId = available.club_id,
+						ClubName = club.name,
+						Count = available.available_quantity,
+						RentalPrice = available.rental_price
+					});
+			}
 		}
 	}
 

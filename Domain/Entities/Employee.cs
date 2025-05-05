@@ -9,12 +9,18 @@ public class Employee
     [Key]
     public int employee_id { get; set; }
 
-    [StringLength(100)]
+    [Required(ErrorMessage = "Ім'я є обов'язковим")]
+    [StringLength(100, ErrorMessage = "Ім'я не може перевищувати 100 символів")]
+    [Display(Name = "Ім'я")]
     public string first_name { get; set; } = null!;
 
-    [StringLength(100)]
+    [Required(ErrorMessage = "Прізвище є обов'язковим")]
+    [StringLength(100, ErrorMessage = "Прізвище не може перевищувати 100 символів")]
+    [Display(Name = "Прізвище")]
     public string last_name { get; set; } = null!;
 
+    [Required(ErrorMessage = "Посада є обов'язковою")]
+    [Display(Name = "Посада")]
     public int position_id { get; set; }
 
     public int club_id { get; set; }

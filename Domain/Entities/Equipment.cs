@@ -29,6 +29,7 @@ public class Equipment
     [Display(Name = "Тип")]
     public int type_id { get; set; }
 
+    [Required(ErrorMessage = "Модель є обов'язковою")]
     [StringLength(100, ErrorMessage = "Модель не може перевищувати 100 символів")]
     [Display(Name = "Модель")]
     public string? model { get; set; }

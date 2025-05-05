@@ -13,17 +13,20 @@ public class Supplier
     [Display(Name = "Назва")]
     public string name { get; set; } = null!;
 
+    [Required(ErrorMessage = "Номер телефону є обов'язковим")]
     [StringLength(100, ErrorMessage = "Номер телефону не може перевищувати 100 символів")]
     [Display(Name = "Номер телефону")]
     [Phone(ErrorMessage = "Некоректний формат номера телефону")]
     public string? phone_number { get; set; }
 
+    [Required(ErrorMessage = "Електронна пошта є обов'язковою")]
     [StringLength(255, ErrorMessage = "Email не може перевищувати 255 символів")]
     [EmailAddress(ErrorMessage = "Некоректний формат електронної пошти")]
-    [RegularExpression(@"^.+@..+\..+$", ErrorMessage = "Email має бути у форматі, подібному до example@domain.com")]
+    [RegularExpression(@"^.+@..+\..+$", ErrorMessage = "Електронна пошта має бути у форматі, подібному до example@domain.com")]
     [Display(Name = "Email")]
     public string? email { get; set; }
 
+    [Required(ErrorMessage = "Адреса є обов'язковою")]
     [StringLength(255, ErrorMessage = "Адреса не може перевищувати 255 символів")]
     [Display(Name = "Адреса")]
     public string? address { get; set; }

@@ -185,7 +185,7 @@
 										<hr class="my-2" />
 										<div class="d-flex justify-content-between align-items-center mb-2">
 											<h6 class="mb-0">Equipment</h6>
-											<button class="btn btn-primary btn-sm" @onclick="@(() => AddEquipment(order.OrderId))">
+											<button class="btn btn-primary btn-sm" @onclick="@(() => ShowAddEquipmentDialog(order.OrderId))">
 												<i class="bi bi-plus"></i> Add
 											</button>
 										</div>
@@ -200,7 +200,8 @@
 														<tr>
 															<th>Equipment</th>
 															<th>Qty</th>
-															<th>Price</th>
+															<th> PUnitrice</th>
+															<th>Total</th>
 															<th></th>
 														</tr>
 													</thead>
@@ -218,16 +219,7 @@
 																		.Sum(od => od.quantity);
 																		var remaining = (available?.available_quantity ?? 0) - usedQuantity;
 																	}
-																	<select class="form-select form-select-sm" value="@detail.available_equipment_id"
-																			@onchange="@((e) => UpdateOrderDetailEquipment(detail, int.Parse(e.Value.ToString())))">
-																		@foreach (var availableEq in GetAvailableEquipmentForOrder(order.OrderId))
-																		{
-																			var eq = GetEquipment(availableEq.equipment_id);
-																			<option value="@availableEq.available_id">
-																				@(eq?.name ?? "Unknown")
-																			</option>
-																		}
-																	</select>
+																	<span class="smalll">@equipment?.name</span>
 																	<small class="text-muted d-block">Available: @remaining</small>
 																</td>
 																<td>
@@ -235,10 +227,14 @@
 																		   max="@GetMaxEquipmentQuantity(detail)"
 																		   @onchange="@((e) => { detail.quantity = int.Parse(e.Value.ToString()); UpdateOrderDetailQuantity(detail); })" />
 																</td>
-
 																<td>
 																	@{
 																		var availEq = GetAvailableEquipment(detail.available_equipment_id);
+																	}
+																	<span>@(availEq?.rental_price.ToString("0.00") ?? "0.00")</span>
+																</td>
+																<td>
+																	@{
 																		var price = availEq?.rental_price ?? 0;
 																		var totalPrice = price * detail.quantity;
 																	}
@@ -249,6 +245,14 @@
 																		<i class="bi bi-trash"></i>
 																	</button>
 																</td>
+															</tr>
+														}
+														@if (orderDetails.Any())
+														{
+															<tr class="table-light">
+																<td colspan="3" class="text-end fw-bold">Total Equipment:</td>
+																<td class="fw-bold">@GetTotalEquipmentCost(order.OrderId).ToString("C2")</td>
+																<td></td>
 															</tr>
 														}
 													</tbody>
@@ -272,7 +276,6 @@
 									<i class="bi bi-trash"></i>
 								</button>
 							</div>
-							<small class="text-muted">@(order.LastUpdated.HasValue ? $"Updated: {order.LastUpdated.Value.ToString("g")}" : "")</small>
 						</div>
 					</div>
 				</div>
@@ -301,6 +304,7 @@
 	private int orderIdForEquipment;
 	private int selectedEquipmentId;
 	private int selectedEquipmentQuantity = 1;
+	private decimal selectedEquipmentUnitPrice;
 
 	private string searchQuery = "";
 	private List<OrderViewModel> Orders = new();
@@ -336,6 +340,42 @@
 		StateHasChanged();
 	}
 
+	private void ShowAddEquipmentDialog(int orderId)
+	{
+		orderIdForEquipment = orderId;
+		selectedEquipmentId = 0;
+		selectedEquipmentQuantity = 1;
+		selectedEquipmentUnitPrice = 0;
+		equipmentDialogVisible = true;
+	}
+	private decimal GetTotalEquipmentCost(int orderId)
+	{
+		decimal total = 0;
+		var details = GetOrderDetailsByOrderId(orderId);
+
+		foreach (var detail in details)
+		{
+			var availableEq = GetAvailableEquipment(detail.available_equipment_id);
+			if (availableEq != null)
+			{
+				total += availableEq.rental_price * detail.quantity;
+			}
+		}
+
+		return total;
+	}
+	private void UpdateUnitPrice(ChangeEventArgs e)
+	{
+		if (int.TryParse(e.Value.ToString(), out int equipmentId) && equipmentId > 0)
+		{
+			var available = GetAvailableEquipment(equipmentId);
+			selectedEquipmentUnitPrice = available?.rental_price ?? 0;
+		}
+		else
+		{
+			selectedEquipmentUnitPrice = 0;
+		}
+	}
 
 	private async Task UpdateOrderDetailEquipment(OrderDetail detail, int newAvailableEquipmentId)
 	{
@@ -489,7 +529,8 @@
 
 	private Equipment? GetEquipment(int equipmentId)
 	{
-		return equipments.FirstOrDefault(e => e.equipment_id == equipmentId);
+		var eq = equipments.FirstOrDefault(e => e.equipment_id == equipmentId);
+		return eq;
 	}
 
 	private int GetMaxEquipmentQuantity(OrderDetail detail)
@@ -513,17 +554,17 @@
 		var clubId = GetClubIdForOrder(orderId);
 		var result = new List<AvailableEquipment>();
 
-		foreach (var equipment in availableEquipments.Where(ae => ae.club_id == clubId))
+		foreach (var availableEquipment in availableEquipments.Where(ae => ae.club_id == clubId))
 		{
-			// Count how many of this equipment is already used
+			// Count how many of this equipment is already used across all orders
 			var usedQuantity = orderDetails
-				.Where(od => od.available_equipment_id == equipment.available_id && od.order_id != orderId)
+				.Where(od => od.available_equipment_id == availableEquipment.available_id)
 				.Sum(od => od.quantity);
 
 			// Only include if there's some quantity available
-			if (equipment.available_quantity > usedQuantity)
+			if (availableEquipment.available_quantity > usedQuantity)
 			{
-				result.Add(equipment);
+				result.Add(availableEquipment);
 			}
 		}
 
@@ -659,15 +700,7 @@
 		}
 
 		// Add equipment prices
-		var orderEquipment = GetOrderDetailsByOrderId(order.OrderId);
-		foreach (var detail in orderEquipment)
-		{
-			var availableEq = GetAvailableEquipment(detail.available_equipment_id);
-			if (availableEq != null)
-			{
-				total += availableEq.rental_price * detail.quantity;
-			}
-		}
+		total += GetTotalEquipmentCost(order.OrderId);
 
 		order.TotalAmount = total;
 		await SaveOrder(order);
