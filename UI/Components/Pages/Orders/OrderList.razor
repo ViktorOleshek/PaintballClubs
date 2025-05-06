@@ -37,7 +37,7 @@
 			@foreach (var order in FilteredOrders)
 			{
 				<!-- Replace the existing card markup with this more compact design -->
-				<div class="col-12 col-md-6 col-lg-4 mb-3">
+				<div class="col-12 col-md-6 col-lg-4 mb-3 position-relative">
 					<div class="card shadow-sm h-100">
 						<!-- Card header with status color -->
 						<div class="card-header @GetStatusBadgeClass(order.StatusName)" style="color: white;">
@@ -45,7 +45,7 @@
 								<h6 class="mb-0">Order #@order.OrderNumber</h6>
 								<div class="dropdown">
 									<button class="btn btn-sm dropdown-toggle" style="background: transparent; color: white;" type="button"
-											id="dropdownMenuButton_@order.OrderId" data-bs-toggle="dropdown" aria-expanded="false">
+									id="dropdownMenuButton_@order.OrderId" data-bs-toggle="dropdown" aria-expanded="false">
 										@order.StatusName
 									</button>
 									<ul class="dropdown-menu dropdown-menu-end position-absolute" style="z-index: 1050;" aria-labelledby="dropdownMenuButton_@order.OrderId">
@@ -96,7 +96,7 @@
 								<div class="col-6 mt-1">
 									<label class="form-label small mb-0 text-muted">Client</label>
 									<select class="form-select form-select-sm py-0" value="@(order.ClientId.HasValue ? order.ClientId.Value.ToString() : "")"
-											@onchange="@((e) => UpdateOrderClient(order, string.IsNullOrEmpty(e.Value.ToString()) ? null : (int?)int.Parse(e.Value.ToString())))">
+									@onchange="@((e) => UpdateOrderClient(order, string.IsNullOrEmpty(e.Value.ToString()) ? null : (int?)int.Parse(e.Value.ToString())))">
 										<option value="">None</option>
 										@foreach (var client in clients)
 										{
@@ -109,12 +109,12 @@
 									<div class="col-6">
 										<label class="form-label small mb-0 text-muted">Order Date</label>
 										<input type="date" class="form-control form-control-sm py-0" value="@order.OrderDate.ToString("yyyy-MM-dd")"
-											   @onchange="@((e) => { order.OrderDate = DateTime.Parse(e.Value.ToString()); UpdateOrderDate(order); })" />
+										@onchange="@((e) => { order.OrderDate = DateTime.Parse(e.Value.ToString()); UpdateOrderDate(order); })" />
 									</div>
 									<div class="col-6">
 										<label class="form-label small mb-0 text-muted">Event Date</label>
 										<input type="date" class="form-control form-control-sm py-0" value="@order.EventDate.ToString("yyyy-MM-dd")"
-											   @onchange="@((e) => { order.EventDate = DateTime.Parse(e.Value.ToString()); UpdateEventDate(order); })" />
+										@onchange="@((e) => { order.EventDate = DateTime.Parse(e.Value.ToString()); UpdateEventDate(order); })" />
 									</div>
 								</div>
 
@@ -134,7 +134,7 @@
 								<div class="accordion-item">
 									<h2 class="accordion-header" id="heading@(order.OrderId)">
 										<button class="accordion-button collapsed p-2" type="button" @onclick="() => ToggleDetails(order.OrderId)"
-												aria-expanded="false" aria-controls="collapse@(order.OrderId)">
+										aria-expanded="@(expandedOrderDetails.Contains(order.OrderId))" aria-controls="collapse@(order.OrderId)">
 											<div class="d-flex align-items-center justify-content-between w-100">
 												<span>Match & Equipment Details</span>
 												<span class="badge bg-primary rounded-pill ms-2">@(GetOrderDetailsByOrderId(order.OrderId).Count)</span>
@@ -143,129 +143,131 @@
 									</h2>
 								</div>
 							</div>
-							@if (expandedOrderDetails.Contains(order.OrderId))
-							{
-								<div class="order-details-container mt-2 pt-2 border-top">
-									<div class="card-body p-2">
-										<h6 class="mb-2">Match Details</h6>
-										@if (GetMatchByOrderId(order.OrderId) is Match match)
-										{
-											<div class="row g-2">
-												<div class="col-6">
-													<label class="form-label small mb-0 text-muted">Match Date</label>
-													<input type="date" class="form-control form-control-sm" value="@match.event_date.ToString("yyyy-MM-dd")"
-														   @onchange="@((e) => { match.event_date = DateTime.Parse(e.Value.ToString()); UpdateMatchDate(match); })" />
+							<div id="collapse@(order.OrderId)" class="order-details-popup @(expandedOrderDetails.Contains(order.OrderId) ? "show" : "")">
+								@if (expandedOrderDetails.Contains(order.OrderId))
+								{
+									<div class="order-details-container mt-2 pt-2 border-top">
+										<div class="card-body p-2">
+											<h6 class="mb-2">Match Details</h6>
+											@if (GetMatchByOrderId(order.OrderId) is Match match)
+											{
+												<div class="row g-2">
+													<div class="col-6">
+														<label class="form-label small mb-0 text-muted">Match Date</label>
+														<input type="date" class="form-control form-control-sm" value="@match.event_date.ToString("yyyy-MM-dd")"
+														@onchange="@((e) => { match.event_date = DateTime.Parse(e.Value.ToString()); UpdateMatchDate(match); })" />
+													</div>
+													<div class="col-6">
+														<label class="form-label small mb-0 text-muted">Location</label>
+														<select class="form-select form-select-sm" value="@(match.location_id.HasValue ? match.location_id.Value.ToString() : "")"
+														@onchange="@((e) => UpdateMatchLocation(match, string.IsNullOrEmpty(e.Value.ToString()) ? null : (int?)int.Parse(e.Value.ToString())))">
+															<option value="">None</option>
+															@foreach (var location in locations)
+															{
+																<option value="@location.location_id">@location.location_name</option>
+															}
+														</select>
+													</div>
+													<div class="col-12">
+														<label class="form-label small mb-0 text-muted">Participants</label>
+														<input type="number" class="form-control form-control-sm" value="@match.participant_count" min="0"
+														@onchange="@((e) => { match.participant_count = int.Parse(e.Value.ToString()); UpdateMatchParticipants(match); })" />
+													</div>
+													<div class="col-12">
+														<label class="form-label small mb-0 text-muted">Description</label>
+														<textarea class="form-control form-control-sm" rows="2" @bind="match.description" @onblur="@(_ => UpdateMatchDescription(match))"></textarea>
+													</div>
 												</div>
-												<div class="col-6">
-													<label class="form-label small mb-0 text-muted">Location</label>
-													<select class="form-select form-select-sm" value="@(match.location_id.HasValue ? match.location_id.Value.ToString() : "")"
-															@onchange="@((e) => UpdateMatchLocation(match, string.IsNullOrEmpty(e.Value.ToString()) ? null : (int?)int.Parse(e.Value.ToString())))">
-														<option value="">None</option>
-														@foreach (var location in locations)
-														{
-															<option value="@location.location_id">@location.location_name</option>
-														}
-													</select>
-												</div>
-												<div class="col-12">
-													<label class="form-label small mb-0 text-muted">Participants</label>
-													<input type="number" class="form-control form-control-sm" value="@match.participant_count" min="0"
-														   @onchange="@((e) => { match.participant_count = int.Parse(e.Value.ToString()); UpdateMatchParticipants(match); })" />
-												</div>
-												<div class="col-12">
-													<label class="form-label small mb-0 text-muted">Description</label>
-													<textarea class="form-control form-control-sm" rows="2" @bind="match.description" @onblur="@(_ => UpdateMatchDescription(match))"></textarea>
-												</div>
+											}
+											else
+											{
+												<button class="btn btn-outline-primary btn-sm mb-2" @onclick="@(() => CreateMatch(order.OrderId))">Create Match</button>
+											}
+											<hr class="my-2" />
+											<div class="d-flex justify-content-between align-items-center mb-2">
+												<h6 class="mb-0">Equipment</h6>
+												<button class="btn btn-primary btn-sm" @onclick="@(() => ShowAddEquipmentDialog(order.OrderId))">
+													<i class="bi bi-plus"></i> Add
+												</button>
 											</div>
-										}
-										else
-										{
-											<button class="btn btn-outline-primary btn-sm mb-2" @onclick="@(() => CreateMatch(order.OrderId))">Create Match</button>
-										}
-										<hr class="my-2" />
-										<div class="d-flex justify-content-between align-items-center mb-2">
-											<h6 class="mb-0">Equipment</h6>
-											<button class="btn btn-primary btn-sm" @onclick="@(() => ShowAddEquipmentDialog(order.OrderId))">
-												<i class="bi bi-plus"></i> Add
-											</button>
-										</div>
-										@{
-											var orderDetails = GetOrderDetailsByOrderId(order.OrderId);
-										}
-										@if (orderDetails.Any())
-										{
-											<div class="table-responsive">
-												<table class="table table-sm table-bordered mb-0">
-													<thead class="table-light">
-														<tr>
-															<th>Equipment</th>
-															<th>Qty</th>
-															<th> PUnitrice</th>
-															<th>Total</th>
-															<th></th>
-														</tr>
-													</thead>
-													<tbody>
-														@foreach (var detail in orderDetails)
-														{
+											@{
+												var orderDetails = GetOrderDetailsByOrderId(order.OrderId);
+											}
+											@if (orderDetails.Any())
+											{
+												<div class="table-responsive">
+													<table class="table table-sm table-bordered mb-0">
+														<thead class="table-light">
 															<tr>
-																<td>
-																	@{
-																		var availableEquipment = GetAvailableEquipment(detail.available_equipment_id);
-																		var equipment = GetEquipment(availableEquipment?.equipment_id ?? 0);
-																		var available = GetAvailableEquipment(detail.available_equipment_id);
-																		var usedQuantity = orderDetails
-																		.Where(od => od.available_equipment_id == detail.available_equipment_id && od.order_detail_id != detail.order_detail_id)
-																		.Sum(od => od.quantity);
-																		var remaining = (available?.available_quantity ?? 0) - usedQuantity;
-																	}
-																	<span class="smalll">@equipment?.name</span>
-																	<small class="text-muted d-block">Available: @remaining</small>
-																</td>
-																<td>
-																	<input type="number" class="form-control form-control-sm" value="@detail.quantity" min="1"
-																		   max="@GetMaxEquipmentQuantity(detail)"
-																		   @onchange="@((e) => { detail.quantity = int.Parse(e.Value.ToString()); UpdateOrderDetailQuantity(detail); })" />
-																</td>
-																<td>
-																	@{
-																		var availEq = GetAvailableEquipment(detail.available_equipment_id);
-																	}
-																	<span>@(availEq?.rental_price.ToString("0.00") ?? "0.00")</span>
-																</td>
-																<td>
-																	@{
-																		var price = availEq?.rental_price ?? 0;
-																		var totalPrice = price * detail.quantity;
-																	}
-																	<span>@totalPrice.ToString("C2")</span>
-																</td>
-																<td class="text-center">
-																	<button class="btn btn-danger btn-sm" @onclick="@(() => DeleteOrderDetail(detail.order_detail_id))">
-																		<i class="bi bi-trash"></i>
-																	</button>
-																</td>
+																<th>Equipment</th>
+																<th>Qty</th>
+																<th>PUnitrice</th>
+																<th>Total</th>
+																<th></th>
 															</tr>
-														}
-														@if (orderDetails.Any())
-														{
-															<tr class="table-light">
-																<td colspan="3" class="text-end fw-bold">Total Equipment:</td>
-																<td class="fw-bold">@GetTotalEquipmentCost(order.OrderId).ToString("C2")</td>
-																<td></td>
-															</tr>
-														}
-													</tbody>
-												</table>
-											</div>
-										}
-										else
-										{
-											<div class="alert alert-info py-2 mb-0">No equipment added yet.</div>
-										}
+														</thead>
+														<tbody>
+															@foreach (var detail in orderDetails)
+															{
+																<tr>
+																	<td>
+																		@{
+																			var availableEquipment = GetAvailableEquipment(detail.available_equipment_id);
+																			var equipment = GetEquipment(availableEquipment?.equipment_id ?? 0);
+																			var available = GetAvailableEquipment(detail.available_equipment_id);
+																			var usedQuantity = orderDetails
+																			.Where(od => od.available_equipment_id == detail.available_equipment_id && od.order_detail_id != detail.order_detail_id)
+																			.Sum(od => od.quantity);
+																			var remaining = (available?.available_quantity ?? 0) - usedQuantity;
+																		}
+																		<span class="smalll">@equipment?.name</span>
+																		<small class="text-muted d-block">Available: @remaining</small>
+																	</td>
+																	<td>
+																		<input type="number" class="form-control form-control-sm" value="@detail.quantity" min="1"
+																		max="@GetMaxEquipmentQuantity(detail)"
+																		@onchange="@((e) => { detail.quantity = int.Parse(e.Value.ToString()); UpdateOrderDetailQuantity(detail); })" />
+																	</td>
+																	<td>
+																		@{
+																			var availEq = GetAvailableEquipment(detail.available_equipment_id);
+																		}
+																		<span>@(availEq?.rental_price.ToString("0.00") ?? "0.00")</span>
+																	</td>
+																	<td>
+																		@{
+																			var price = availEq?.rental_price ?? 0;
+																			var totalPrice = price * detail.quantity;
+																		}
+																		<span>@totalPrice.ToString("C2")</span>
+																	</td>
+																	<td class="text-center">
+																		<button class="btn btn-danger btn-sm" @onclick="@(() => DeleteOrderDetail(detail.order_detail_id))">
+																			<i class="bi bi-trash"></i>
+																		</button>
+																	</td>
+																</tr>
+															}
+															@if (orderDetails.Any())
+															{
+																<tr class="table-light">
+																	<td colspan="3" class="text-end fw-bold">Total Equipment:</td>
+																	<td class="fw-bold">@GetTotalEquipmentCost(order.OrderId).ToString("C2")</td>
+																	<td></td>
+																</tr>
+															}
+														</tbody>
+													</table>
+												</div>
+											}
+											else
+											{
+												<div class="alert alert-info py-2 mb-0">No equipment added yet.</div>
+											}
+										</div>
 									</div>
-								</div>
-							}
+								}
+							</div>
 						</div>
 						<div class="card-footer p-2 d-flex justify-content-between">
 							<div>
@@ -332,10 +334,17 @@
 	private HashSet<int> expandedOrderDetails = new HashSet<int>();
 	private void ToggleDetails(int orderId)
 	{
+		// If this specific order ID is already expanded, remove it to collapse
 		if (expandedOrderDetails.Contains(orderId))
+		{
 			expandedOrderDetails.Remove(orderId);
+		}
 		else
+		{
+			// Otherwise, clear all expanded orders and expand only this one
+			expandedOrderDetails.Clear();
 			expandedOrderDetails.Add(orderId);
+		}
 
 		StateHasChanged();
 	}
@@ -519,7 +528,8 @@
 
 	private List<OrderDetail> GetOrderDetailsByOrderId(int orderId)
 	{
-		return orderDetails.Where(od => od.order_id == orderId).ToList();
+		var result = orderDetails.Where(od => od.order_id == orderId).ToList();
+		return result;
 	}
 
 	private AvailableEquipment? GetAvailableEquipment(int availableId)
@@ -1004,9 +1014,29 @@
 
 <style>
 	.order-details-container {
-		transition: max-height 0.3s ease;
-		overflow: hidden;
 		background-color: #f9f9f9;
 		border-radius: 0 0 4px 4px;
+	}
+
+	/* Updated styles for accordion behavior */
+	div[id^="collapse"] {
+		display: none;
+	}
+
+		div[id^="collapse"].show {
+			display: block;
+		}
+
+	/* Add these new styles */
+	.order-details-popup {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		z-index: 100;
+		background-color: white;
+		border: 1px solid #dee2e6;
+		border-radius: 0.25rem;
+		box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 	}
 </style>
