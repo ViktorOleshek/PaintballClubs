@@ -1,12 +1,17 @@
 ﻿@page "/suppliers"
+@using BlazorDownloadFile
 @using Domain.Entities
+@using Services.Export
 @using UI.Components.Pages.SupplyOrders.Component
 @using Services.ExternalApi.Facade
 @using System.ComponentModel.DataAnnotations
+
 @inject IApiFacade ApiFacade
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
-@inject MudBlazor.ISnackbar Snackbar
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IExportService ExportService
 
 <h3>Список постачальників</h3>
 
@@ -376,6 +381,11 @@
 	protected override async Task OnInitializedAsync()
 	{
 		await LoadData();
+	}
+
+	private async Task ExportSuppliers()
+	{
+
 	}
 
 	private async Task LoadData()

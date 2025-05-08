@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using BlazorDownloadFile;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Refit;
 using Services.ExternalApi;
@@ -13,6 +14,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddBlazorDownloadFile(ServiceLifetime.Scoped);
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.AddScoped<TokenHttpMessageHandler>();

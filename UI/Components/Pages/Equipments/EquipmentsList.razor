@@ -101,25 +101,100 @@
 				<div class="col-md-12">
 					<div class="btn-group btn-group-sm">
 						<span class="input-group-text">Сортування:</span>
-						<button class="btn @(sortField == "name" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
-								@onclick='() => ToggleSort(" name")'>
-							Назва @(sortField == "name" ? (ascending ? "↑" : "↓") : "")
+						<button class="btn @(sortField == "name" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("name")'>
+							Назва
+							@if (sortField == "name")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
 						</button>
-						<button class="btn @(sortField == "brand" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
-								@onclick='() => ToggleSort(" brand")'>
-							Бренд @(sortField == "brand" ? (ascending ? "↑" : "↓") : "")
+						<button class="btn @(sortField == "brand" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("brand")'>
+							Бренд
+							@if (sortField == "brand")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
 						</button>
-						<button class="btn @(sortField == "category" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
-								@onclick='() => ToggleSort(" category")'>
-							Категорія @(sortField == "category" ? (ascending ? "↑" : "↓") : "")
+						<button class="btn @(sortField == "category" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("category")'>
+							Категорія
+							@if (sortField == "category")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
 						</button>
-						<button class="btn @(sortField == "type" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
-								@onclick='() => ToggleSort(" type")'>
-							Тип @(sortField == "type" ? (ascending ? "↑" : "↓") : "")
+						<button class="btn @(sortField == "type" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("type")'>
+							Тип
+							@if (sortField == "type")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
 						</button>
-						<button class="btn @(sortField == "model" ? (ascending ? "btn-primary" : "btn-secondary") : "btn-outline-secondary")"
-								@onclick='() => ToggleSort(" model")'>
-							Модель @(sortField == "model" ? (ascending ? "↑" : "↓") : "")
+						<button class="btn @(sortField == "model" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("model")'>
+							Модель
+							@if (sortField == "model")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
 						</button>
 					</div>
 				</div>
@@ -219,7 +294,7 @@
 	@foreach (var equipment in PaginatedEquipments)
 	{
 		<div class="col-md-4 col-lg-3 col-xl-2-4 mb-2">
-			<div class="card h-100 shadow-sm">
+			<div class="card h-100 shadow-sm equipment-card-container">
 				<div class="card-header p-2 d-flex justify-content-between">
 					@if (editingEquipment?.equipment_id == equipment.equipment_id)
 					{
@@ -326,18 +401,22 @@
 
 								@if (selectedEquipmentId == equipment.equipment_id)
 								{
-									<div class="card mt-1 p-1 bg-light">
+									<div class="card mt-1 p-1 bg-light equipment-details">
 										@if (count.ClubCounts.Any())
 										{
-											<div class="list-group list-group-flush small">
+											<div class="list-group list-group-flush small overflow-auto" style="max-height: 150px;">
+												<div class="list-group-item py-1 px-2 d-flex text-secondary fw-bold">
+													<div class="col-6">Клуб</div>
+													<div class="col-3 text-center">Штук</div>
+													<div class="col-3 text-end">Ціна</div>
+												</div>
+
 												@foreach (var clubCount in count.ClubCounts.OrderByDescending(c => c.Count))
 												{
-													<div class="list-group-item py-1 px-2 d-flex justify-content-between">
-														<span title="@clubCount.ClubName" class="text-truncate">@clubCount.ClubName</span>
-														<span class="ms-1">
-															<strong>@clubCount.Count</strong> шт. /
-															<span class="text-success">@clubCount.RentalPrice.ToString("F2") грн</span>
-														</span>
+													<div class="list-group-item py-1 px-2 d-flex align-items-center">
+														<div class="col-6 text-truncate" title="@clubCount.ClubName">@clubCount.ClubName</div>
+														<div class="col-3 text-center"><strong>@clubCount.Count</strong></div>
+														<div class="col-3 text-end text-success">@clubCount.RentalPrice.ToString("F2") грн</div>
 													</div>
 												}
 											</div>
@@ -402,8 +481,8 @@ else if (FilteredEquipments.Count() == 0)
 	private int pageSize = 10;
 
 	// Додайте після змінних фільтрації
-	private string sortField = "name";
-	private bool ascending = true;
+	private string? sortField = null;
+	private bool? ascending = null;
 
 	// Filter parameters
 	private string searchQuery = "";
@@ -452,37 +531,64 @@ else if (FilteredEquipments.Count() == 0)
 		public decimal RentalPrice { get; set; }
 	}
 
-	private IEnumerable<Equipment> FilteredEquipments =>
-		equipments.Where(e =>
-			(string.IsNullOrWhiteSpace(searchQuery) ||
-				e.name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
-			(string.IsNullOrWhiteSpace(modelFilter) ||
-				(e.model != null && e.model.Contains(modelFilter, StringComparison.OrdinalIgnoreCase))) &&
-			(string.IsNullOrWhiteSpace(descriptionFilter) ||
-				(e.description != null && e.description.Contains(descriptionFilter, StringComparison.OrdinalIgnoreCase))) &&
-			(brandFilter == 0 || e.brand_id == brandFilter) &&
-			(categoryFilter == 0 || e.category_id == categoryFilter) &&
-			(typeFilter == 0 || e.type_id == typeFilter) &&
-			(!dateFilter.HasValue ||
-				(e.CreateDatetime.HasValue && e.CreateDatetime.Value.Date == dateFilter.Value.Date))
-		).OrderBy(e => sortField switch
+	private IEnumerable<Equipment> FilteredEquipments
+	{
+		get
 		{
-			"name" => ascending ? e.name : null,
-			"brand" => ascending ? GetBrandName(e.brand_id) : null,
-			"category" => ascending ? GetCategoryName(e.category_id) : null,
-			"type" => ascending ? GetTypeName(e.type_id) : null,
-			"model" => ascending ? e.model : null,
-			_ => e.name
-		}).ThenBy(e => e.name)
-		.OrderByDescending(e => sortField switch
-		{
-			"name" => !ascending ? e.name : null,
-			"brand" => !ascending ? GetBrandName(e.brand_id) : null,
-			"category" => !ascending ? GetCategoryName(e.category_id) : null,
-			"type" => !ascending ? GetTypeName(e.type_id) : null,
-			"model" => !ascending ? e.model : null,
-			_ => null
-		});
+			// Спочатку фільтруємо
+			var filtered = equipments.Where(e =>
+				(string.IsNullOrWhiteSpace(searchQuery) ||
+					e.name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+				(string.IsNullOrWhiteSpace(modelFilter) ||
+					(e.model != null && e.model.Contains(modelFilter, StringComparison.OrdinalIgnoreCase))) &&
+				(string.IsNullOrWhiteSpace(descriptionFilter) ||
+					(e.description != null && e.description.Contains(descriptionFilter, StringComparison.OrdinalIgnoreCase))) &&
+				(brandFilter == 0 || e.brand_id == brandFilter) &&
+				(categoryFilter == 0 || e.category_id == categoryFilter) &&
+				(typeFilter == 0 || e.type_id == typeFilter) &&
+				(!dateFilter.HasValue ||
+					(e.CreateDatetime.HasValue && e.CreateDatetime.Value.Date == dateFilter.Value.Date))
+			).ToList();
+
+			// Якщо сортування не вибране або скинуте
+			if (sortField == null || ascending == null)
+			{
+				return filtered.OrderBy(e => e.name);
+			}
+
+			// Сортування в залежності від вибраного поля та напрямку
+			switch (sortField)
+			{
+				case "name":
+					return ascending == true
+						? filtered.OrderBy(e => e.name)
+						: filtered.OrderByDescending(e => e.name);
+
+				case "brand":
+					return ascending == true
+						? filtered.OrderBy(e => GetBrandName(e.brand_id))
+						: filtered.OrderByDescending(e => GetBrandName(e.brand_id));
+
+				case "category":
+					return ascending == true
+						? filtered.OrderBy(e => GetCategoryName(e.category_id))
+						: filtered.OrderByDescending(e => GetCategoryName(e.category_id));
+
+				case "type":
+					return ascending == true
+						? filtered.OrderBy(e => GetTypeName(e.type_id))
+						: filtered.OrderByDescending(e => GetTypeName(e.type_id));
+
+				case "model":
+					return ascending == true
+						? filtered.OrderBy(e => e.model ?? string.Empty)
+						: filtered.OrderByDescending(e => e.model ?? string.Empty);
+
+				default:
+					return filtered.OrderBy(e => e.name);
+			}
+		}
+	}
 
 	private IEnumerable<Equipment> PaginatedEquipments =>
 		FilteredEquipments.Skip((currentPage - 1) * pageSize).Take(pageSize);
@@ -495,17 +601,27 @@ else if (FilteredEquipments.Count() == 0)
 	}
 
 	private void ToggleSort(string field)
-{
-    if (sortField == field)
-    {
-        ascending = !ascending;
-    }
-    else
-    {
-        sortField = field;
-        ascending = true;
-    }
-}
+	{
+		if (sortField == field)
+		{
+			if (ascending == true)
+				ascending = false;
+			else if (ascending == false)
+				ascending = null;
+			else
+				sortField = null;
+		}
+		else
+		{
+			sortField = field;
+			ascending = true;
+		}
+	}
+
+	private void CloseEquipmentDetails()
+	{
+		selectedEquipmentId = null;
+	}
 
 	private async Task LoadData()
 	{
@@ -770,6 +886,21 @@ else if (FilteredEquipments.Count() == 0)
 }
 
 <style>
+	.equipment-card-container {
+		position: relative;
+	}
+
+	.equipment-details {
+		position: absolute;
+		left: 0;
+		right: 0;
+		z-index: 100;
+		box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+		max-width: 100%;
+		overflow-y: auto;
+		max-height: 300px;
+	}
+
 	.col-xl-2-4 {
 		flex: 0 0 auto;
 		width: 20%;
@@ -777,5 +908,20 @@ else if (FilteredEquipments.Count() == 0)
 
 	.fs-7 {
 		font-size: 0.85rem !important;
+	}
+
+	.card-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0,0,0,0.3);
+		z-index: 99;
+		display: none;
+	}
+
+	.show-backdrop {
+		display: block;
 	}
 </style>

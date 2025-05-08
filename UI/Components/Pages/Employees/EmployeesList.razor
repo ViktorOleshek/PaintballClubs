@@ -1,0 +1,645 @@
+﻿@page "/employees"
+@using Domain.Entities
+@using UI.Components.Pages.SupplyOrders.Component
+@using Services.ExternalApi.Facade
+@using System.ComponentModel.DataAnnotations
+@inject IApiFacade ApiFacade
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject MudBlazor.ISnackbar Snackbar
+
+<h3>Список працівників</h3>
+
+<div class="card mb-3">
+	<div class="card-header">
+		<div class="d-flex justify-content-between align-items-center mb-2">
+			<h5 class="mb-0">
+				<span style="cursor: pointer;" @onclick="ToggleFilters">
+					Фільтри
+					<i class="bi @(showFilters ? "bi-chevron-up" : "bi-chevron-down")"></i>
+				</span>
+			</h5>
+			<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
+				<i class="bi bi-plus-circle"></i> Додати працівника
+			</button>
+		</div>
+
+		@if (showFilters)
+		{
+			<div class="row g-2">
+				<div class="col-md-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Ім'я</span>
+						<input type="text" class="form-control" @bind="firstNameFilter" @bind:event="oninput"
+							   placeholder="Фільтр за ім'ям">
+					</div>
+				</div>
+				<div class="col-md-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Прізвище</span>
+						<input type="text" class="form-control" @bind="lastNameFilter" @bind:event="oninput"
+							   placeholder="Фільтр за прізвищем">
+					</div>
+				</div>
+				<div class="col-md-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Логін</span>
+						<input type="text" class="form-control" @bind="loginFilter" @bind:event="oninput"
+							   placeholder="Фільтр за логіном">
+					</div>
+				</div>
+				<div class="col-md-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Посада</span>
+						<input type="text" class="form-control" @bind="positionFilter" @bind:event="oninput"
+							   placeholder="Фільтр за посадою">
+					</div>
+				</div>
+				<div class="col-md-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Клуб</span>
+						<input type="text" class="form-control" @bind="clubFilter" @bind:event="oninput"
+							   placeholder="Фільтр за клубом">
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+</div>
+@if (showAddNewForm)
+{
+	<div class="card mb-3">
+		<div class="card-header d-flex justify-content-between">
+			<span>Додати нового працівника</span>
+			<button type="button" class="btn-close" @onclick="ToggleAddNewForm"></button>
+		</div>
+		<div class="card-body">
+			<EditForm Model="newEmployee" OnValidSubmit="AddNewEmployee" Context="formContext">
+				<DataAnnotationsValidator />
+
+				<div class="row g-2">
+					<div class="col-md-4">
+						<label class="form-label">Ім'я</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newEmployee.first_name" />
+						<ValidationMessage For="@(() => newEmployee.first_name)" class="text-danger small" />
+					</div>
+					<div class="col-md-4">
+						<label class="form-label">Прізвище</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newEmployee.last_name" />
+						<ValidationMessage For="@(() => newEmployee.last_name)" class="text-danger small" />
+					</div>
+					<div class="col-md-4">
+						<label class="form-label">Логін</label>
+						<InputText class="form-control form-control-sm" @bind-Value="newEmployee.login" />
+						<ValidationMessage For="@(() => newEmployee.login)" class="text-danger small" />
+					</div>
+					<div class="col-md-4">
+						<label class="form-label">Пароль</label>
+						<InputText type="password" class="form-control form-control-sm" @bind-Value="newEmployee.password" />
+						<ValidationMessage For="@(() => newEmployee.password)" class="text-danger small" />
+					</div>
+					<div class="col-md-4">
+						<label class="form-label">Посада</label>
+						<InputSelect class="form-select form-select-sm" @bind-Value="newEmployee.position_id">
+							@foreach (var position in positions)
+							{
+								<option value="@position.position_id">@position.position_name</option>
+							}
+						</InputSelect>
+						<ValidationMessage For="@(() => newEmployee.position_id)" class="text-danger small" />
+					</div>
+					<div class="col-md-4">
+						<label class="form-label">Клуб</label>
+						<InputSelect class="form-select form-select-sm" @bind-Value="newEmployee.club_id">
+							@foreach (var club in clubs)
+							{
+								<option value="@club.club_id">@club.name</option>
+							}
+						</InputSelect>
+						<ValidationMessage For="@(() => newEmployee.club_id)" class="text-danger small" />
+					</div>
+					<div class="col-12">
+						<div class="d-flex justify-content-end gap-2">
+							<button type="button" class="btn btn-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
+							<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+						</div>
+					</div>
+				</div>
+			</EditForm>
+		</div>
+	</div>
+}
+
+<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+	<table class="table table-striped table-hover table-sm table-bordered">
+		<thead class="sticky-top">
+			<tr>
+				<th @onclick='() => SortData("firstName")' style="cursor: pointer;">
+					Ім'я
+					@if (currentSortColumn == "firstName")
+					{
+						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+					}
+				</th>
+				<th @onclick='() => SortData("lastName")' style="cursor: pointer;">
+					Прізвище
+					@if (currentSortColumn == "lastName")
+					{
+						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+					}
+				</th>
+				<th @onclick='() => SortData("login")' style="cursor: pointer;">
+					Логін
+					@if (currentSortColumn == "login")
+					{
+						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+					}
+				</th>
+				<th @onclick='() => SortData("password")' style="cursor: pointer;">
+					Пароль
+					@if (currentSortColumn == "password")
+					{
+						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+					}
+				</th>
+				<th @onclick='() => SortData("position")' style="cursor: pointer;">
+					Посада
+					@if (currentSortColumn == "position")
+					{
+						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+					}
+				</th>
+				<th @onclick='() => SortData("club")' style="cursor: pointer;">
+					Клуб
+					@if (currentSortColumn == "club")
+					{
+						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+					}
+				</th>
+				<th>Дії</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var employee in PaginatedEmployees)
+			{
+				<tr>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.first_name" />
+								<ValidationMessage For="@(() => editingEmployee.first_name)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@employee.first_name
+						}
+					</td>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.last_name" />
+								<ValidationMessage For="@(() => editingEmployee.last_name)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@employee.last_name
+						}
+					</td>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.login" />
+								<ValidationMessage For="@(() => editingEmployee.login)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@employee.login
+						}
+					</td>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+								<DataAnnotationsValidator />
+								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.password" />
+								<ValidationMessage For="@(() => editingEmployee.password)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@employee.password
+						}
+					</td>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+								<DataAnnotationsValidator />
+								<InputSelect class="form-select form-select-sm" @bind-Value="editingEmployee.position_id">
+									@foreach (var position in positions)
+									{
+										<option value="@position.position_id">@position.position_name</option>
+									}
+								</InputSelect>
+								<ValidationMessage For="@(() => editingEmployee.position_id)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@GetPositionName(employee.position_id)
+						}
+					</td>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+								<DataAnnotationsValidator />
+								<InputSelect class="form-select form-select-sm" @bind-Value="editingEmployee.club_id">
+									@foreach (var club in clubs)
+									{
+										<option value="@club.club_id">@club.name</option>
+									}
+								</InputSelect>
+								<ValidationMessage For="@(() => editingEmployee.club_id)" class="text-danger small" />
+							</EditForm>
+						}
+						else
+						{
+							@GetClubName(employee.club_id)
+						}
+					</td>
+					<td>
+						@if (editingEmployee?.employee_id == employee.employee_id)
+						{
+							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee">
+								<DataAnnotationsValidator />
+								<div class="btn-group btn-group-sm">
+									<button class="btn btn-success btn-sm" type="submit">
+										<i class="bi bi-check"></i> Зберегти
+									</button>
+									<button class="btn btn-secondary btn-sm" type="button" @onclick="CancelEditing">
+										<i class="bi bi-x"></i> Скасувати
+									</button>
+								</div>
+							</EditForm>
+						}
+						else
+						{
+							<div class="btn-group btn-group-sm">
+								<button class="btn btn-primary btn-sm" @onclick="() => EditEmployee(employee)">
+									<i class="bi bi-pencil"></i>
+								</button>
+								<button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(employee)">
+									<i class="bi bi-trash"></i>
+								</button>
+							</div>
+						}
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+</div>
+
+@if (employees.Count == 0)
+{
+	<div class="alert alert-info">Працівників не знайдено.</div>
+}
+
+<PaginationControl CurrentPage="currentPage"
+				   PageSize="pageSize"
+				   TotalItems="FilteredEmployees.Count()"
+				   TotalPages="TotalPages"
+				   OnPageChanged="GoToPage"
+				   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
+
+@if (showDeleteConfirmation)
+{
+	<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Підтвердження видалення</h5>
+					<button type="button" class="btn-close" @onclick="CancelDelete"></button>
+				</div>
+				<div class="modal-body">
+					<p>Ви впевнені, що хочете видалити працівника "@(employeeToDelete?.first_name) @(employeeToDelete?.last_name)"?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" @onclick="CancelDelete">Скасувати</button>
+					<button type="button" class="btn btn-danger" @onclick="DeleteEmployee">Видалити</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+@code {
+	// Pagination parameters
+	private int currentPage = 1;
+	private int pageSize = 10;
+
+	// Filter parameters
+	private string firstNameFilter = "";
+	private string lastNameFilter = "";
+	private string loginFilter = "";
+	private string positionFilter = "";
+	private string clubFilter = "";
+
+	private List<Employee> employees = new();
+	private List<Domain.Entities.Position> positions = new();
+	private List<Club> clubs = new();
+
+	private Employee? editingEmployee;
+	private Employee? employeeToDelete;
+	private bool showDeleteConfirmation = false;
+	private bool showAddNewForm = false;
+	private Employee newEmployee = new() { CreateDatetime = DateTime.Now };
+
+	private string currentSortColumn = "lastName";
+	private bool sortAscending = true;
+
+	private bool showFilters = true;
+
+	private void ToggleFilters()
+	{
+		showFilters = !showFilters;
+	}
+
+	private IEnumerable<Employee> FilteredEmployees
+	{
+		get
+		{
+			var filtered = employees.Where(e =>
+				(string.IsNullOrWhiteSpace(firstNameFilter) ||
+					e.first_name.Contains(firstNameFilter, StringComparison.OrdinalIgnoreCase)) &&
+				(string.IsNullOrWhiteSpace(lastNameFilter) ||
+					e.last_name.Contains(lastNameFilter, StringComparison.OrdinalIgnoreCase)) &&
+				(string.IsNullOrWhiteSpace(loginFilter) ||
+					e.login.Contains(loginFilter, StringComparison.OrdinalIgnoreCase)) &&
+				(string.IsNullOrWhiteSpace(positionFilter) ||
+					GetPositionName(e.position_id).Contains(positionFilter, StringComparison.OrdinalIgnoreCase)) &&
+				(string.IsNullOrWhiteSpace(clubFilter) ||
+					GetClubName(e.club_id).Contains(clubFilter, StringComparison.OrdinalIgnoreCase))
+			);
+
+			// Сортування
+			switch (currentSortColumn)
+			{
+				case "firstName":
+					filtered = sortAscending ? filtered.OrderBy(e => e.first_name) : filtered.OrderByDescending(e => e.first_name);
+					break;
+				case "lastName":
+					filtered = sortAscending ? filtered.OrderBy(e => e.last_name) : filtered.OrderByDescending(e => e.last_name);
+					break;
+				case "login":
+					filtered = sortAscending ? filtered.OrderBy(e => e.login) : filtered.OrderByDescending(e => e.login);
+					break;
+				case "position":
+					filtered = sortAscending
+						? filtered.OrderBy(e => positions.FirstOrDefault(p => p.position_id == e.position_id)?.position_name ?? "")
+						: filtered.OrderByDescending(e => positions.FirstOrDefault(p => p.position_id == e.position_id)?.position_name ?? "");
+					break;
+				case "club":
+					filtered = sortAscending
+						? filtered.OrderBy(e => clubs.FirstOrDefault(c => c.club_id == e.club_id)?.name ?? "")
+						: filtered.OrderByDescending(e => clubs.FirstOrDefault(c => c.club_id == e.club_id)?.name ?? "");
+					break;
+				case "password":
+					filtered = sortAscending ? filtered.OrderBy(e => e.password) : filtered.OrderByDescending(e => e.password);
+					break;
+			}
+
+			return filtered;
+		}
+	}
+
+	private IEnumerable<Employee> PaginatedEmployees =>
+		FilteredEmployees.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+	private int TotalPages => (int)Math.Ceiling(FilteredEmployees.Count() / (double)pageSize);
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadData();
+	}
+
+	private async Task LoadData()
+	{
+		try
+		{
+			// Завантаження працівників
+			var employeesResponse = await ApiFacade.EmployeeApiService.Get();
+			if (!employeesResponse.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Не вдалося завантажити дані працівників. Оновіть сторінку.", MudBlazor.Severity.Error);
+				return;
+			}
+			employees = employeesResponse.Content.ToList();
+
+			// Завантаження посад
+			var positionsResponse = await ApiFacade.PositionApiService.Get();
+			if (!positionsResponse.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Не вдалося завантажити дані посад.", MudBlazor.Severity.Warning);
+				return;
+			}
+			positions = positionsResponse.Content.ToList();
+
+			// Завантаження клубів
+			var clubsResponse = await ApiFacade.ClubApiService.Get();
+			if (!clubsResponse.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Не вдалося завантажити дані клубів.", MudBlazor.Severity.Warning);
+				return;
+			}
+			clubs = clubsResponse.Content.ToList();
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка завантаження даних: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	private string GetPositionName(int positionId)
+	{
+		return positions.FirstOrDefault(p => p.position_id == positionId)?.position_name ?? "Невідома посада";
+	}
+
+	private string GetClubName(int clubId)
+	{
+		return clubs.FirstOrDefault(c => c.club_id == clubId)?.name ?? "Невідомий клуб";
+	}
+
+	private void SortData(string column)
+	{
+		if (currentSortColumn == column)
+		{
+			sortAscending = !sortAscending; // Змінюємо напрямок сортування при повторному кліку
+		}
+		else
+		{
+			currentSortColumn = column;
+			sortAscending = true; // Початкове сортування завжди за зростанням
+		}
+	}
+
+	private void GoToPage(int page)
+	{
+		if (page < 1 || page > TotalPages)
+			return;
+		currentPage = page;
+	}
+
+	private void EditEmployee(Employee employee)
+	{
+		editingEmployee = new Employee
+			{
+				employee_id = employee.employee_id,
+				first_name = employee.first_name,
+				last_name = employee.last_name,
+				login = employee.login,
+				password = employee.password,
+				position_id = employee.position_id,
+				club_id = employee.club_id,
+				CreateDatetime = employee.CreateDatetime,
+				UpdateDatetime = DateTime.Now
+			};
+	}
+
+	private void CancelEditing()
+	{
+		editingEmployee = null;
+	}
+
+	private async Task SaveEmployee(EditContext editContext)
+	{
+		if (!editContext.Validate())
+		{
+			Snackbar.Add("Будь ласка, виправте помилки валідації", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		if (editingEmployee == null) return;
+
+		try
+		{
+			editingEmployee.UpdateDatetime = DateTime.Now;
+			var response = await ApiFacade.EmployeeApiService.Update(editingEmployee.employee_id, editingEmployee);
+			if (response.IsSuccessStatusCode)
+			{
+				// Update the local list
+				var index = employees.FindIndex(e => e.employee_id == editingEmployee.employee_id);
+				if (index >= 0)
+				{
+					employees[index] = editingEmployee;
+				}
+				Snackbar.Add("Працівника успішно оновлено", MudBlazor.Severity.Success);
+				editingEmployee = null;
+			}
+			else
+			{
+				Snackbar.Add($"Не вдалось оновити працівника: {response.Error}", MudBlazor.Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка оновлення працівника: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	private void ConfirmDelete(Employee employee)
+	{
+		employeeToDelete = employee;
+		showDeleteConfirmation = true;
+	}
+
+	private void CancelDelete()
+	{
+		employeeToDelete = null;
+		showDeleteConfirmation = false;
+	}
+
+	private async Task DeleteEmployee()
+	{
+		if (employeeToDelete == null) return;
+		try
+		{
+			var response = await ApiFacade.EmployeeApiService.Delete(employeeToDelete.employee_id);
+			if (response.IsSuccessStatusCode)
+			{
+				employees.RemoveAll(e => e.employee_id == employeeToDelete.employee_id);
+				Snackbar.Add("Працівника успішно видалено", MudBlazor.Severity.Success);
+			}
+			else
+			{
+				Snackbar.Add($"Не вдалось видалити працівника: {response.Error}", MudBlazor.Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка видалення працівника: {ex.Message}", MudBlazor.Severity.Error);
+		}
+		finally
+		{
+			employeeToDelete = null;
+			showDeleteConfirmation = false;
+		}
+	}
+
+	private void ToggleAddNewForm()
+	{
+		showAddNewForm = !showAddNewForm;
+		if (showAddNewForm)
+		{
+			// Reset new employee object
+			newEmployee = new Employee { CreateDatetime = DateTime.Now };
+
+			// Встановлюємо початкові значення для випадаючих списків
+			if (positions.Count > 0)
+				newEmployee.position_id = positions.First().position_id;
+
+			if (clubs.Count > 0)
+				newEmployee.club_id = clubs.First().club_id;
+		}
+	}
+
+	private async Task AddNewEmployee(EditContext editContext)
+	{
+		if (!editContext.Validate())
+		{
+			Snackbar.Add("Будь ласка, виправте помилки валідації", MudBlazor.Severity.Warning);
+			return;
+		}
+
+		try
+		{
+			newEmployee.CreateDatetime = DateTime.Now;
+			var response = await ApiFacade.EmployeeApiService.Create(newEmployee);
+			if (response.IsSuccessStatusCode)
+			{
+				// Add the new employee to the list
+				employees.Add(response.Content);
+				Snackbar.Add("Працівника успішно додано", MudBlazor.Severity.Success);
+				showAddNewForm = false;
+			}
+			else
+			{
+				Snackbar.Add($"Не вдалось додати працівника: {response.Error}", MudBlazor.Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка додавання працівника: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+}

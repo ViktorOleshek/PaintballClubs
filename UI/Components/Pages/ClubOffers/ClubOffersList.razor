@@ -201,7 +201,7 @@ else if (FilteredOffers.Count() == 0)
 	// Pagination parameters
 	private int currentPage = 1;
 	private int pageSize = 10;
-	
+
 	// Filter parameters
 	private string searchQuery = "";
 	private string descriptionFilter = "";
@@ -284,16 +284,28 @@ else if (FilteredOffers.Count() == 0)
 
 		try
 		{
+			// Зберігаємо стару ціну перед оновленням
+			var originalOffer = offers.FirstOrDefault(o => o.offer_id == editingOffer.offer_id);
+			decimal oldPrice = originalOffer?.price ?? 0;
+
 			editingOffer.UpdateDatetime = DateTime.Now;
 			var response = await ApiFacade.ClubOffersApiService.Update(editingOffer.offer_id, editingOffer);
+
 			if (response.IsSuccessStatusCode)
 			{
-				// Update the local list
+				// Оновлюємо локальний список
 				var index = offers.FindIndex(o => o.offer_id == editingOffer.offer_id);
 				if (index >= 0)
 				{
 					offers[index] = editingOffer;
 				}
+
+				// Перевіряємо, чи змінилась ціна
+				if (oldPrice != editingOffer.price)
+				{
+					await UpdateOrderTotalAmounts(editingOffer.offer_id, oldPrice, editingOffer.price);
+				}
+
 				Snackbar.Add("Пропозицію успішно оновлено", MudBlazor.Severity.Success);
 				editingOffer = null;
 			}
@@ -305,6 +317,57 @@ else if (FilteredOffers.Count() == 0)
 		catch (Exception ex)
 		{
 			Snackbar.Add($"Помилка оновлення пропозиції: {ex.Message}", MudBlazor.Severity.Error);
+		}
+	}
+
+	// Додаємо новий метод для оновлення total_amount у замовленнях
+	private async Task UpdateOrderTotalAmounts(int offerId, decimal oldPrice, decimal newPrice)
+	{
+		try
+		{
+			// Отримуємо всі замовлення
+			var ordersResponse = await ApiFacade.OrdersApiService.Get();
+			if (!ordersResponse.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Не вдалося отримати замовлення для оновлення сум", MudBlazor.Severity.Warning);
+				return;
+			}
+
+			// Фільтруємо замовлення, які містять дану пропозицію
+			var affectedOrders = ordersResponse.Content.Where(o => o.offer_id == offerId).ToList();
+
+			if (affectedOrders.Count == 0)
+			{
+				return; // Немає замовлень для оновлення
+			}
+
+			int updatedCount = 0;
+			foreach (var order in affectedOrders)
+			{
+				// Розраховуємо нову суму замовлення
+				if (order.total_amount.HasValue)
+				{
+					// Спочатку віднімаємо стару ціну, потім додаємо нову
+					order.total_amount = (order.total_amount - oldPrice) + newPrice;
+					order.UpdateDatetime = DateTime.Now;
+
+					// Оновлюємо замовлення в базі даних
+					var updateResponse = await ApiFacade.OrdersApiService.Update(order.order_id, order);
+					if (updateResponse.IsSuccessStatusCode)
+					{
+						updatedCount++;
+					}
+				}
+			}
+
+			if (updatedCount > 0)
+			{
+				Snackbar.Add($"Оновлено загальну суму у {updatedCount} замовленнях", MudBlazor.Severity.Info);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка при оновленні сум замовлень: {ex.Message}", MudBlazor.Severity.Error);
 		}
 	}
 
