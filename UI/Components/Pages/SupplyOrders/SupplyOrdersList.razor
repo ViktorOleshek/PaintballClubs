@@ -1,14 +1,20 @@
 ﻿@page "/supply-orders"
+@using BlazorDownloadFile
 @using Domain.Constants
 @using Domain.Entities
 @using System.Collections.Generic
+@using Services.Export
+@using Services.Export.Model
 @using Services.ExternalApi.Facade
 @using UI.Components.Pages.SupplyOrders.Component
 @using System.ComponentModel.DataAnnotations
+
 @inject IApiFacade ApiFacade
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
-@inject MudBlazor.ISnackbar Snackbar
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IExportService ExportService
 
 <h3 class="mb-4">Supply Orders Management</h3>
 
@@ -27,6 +33,125 @@
 				  Statuses="@statuses"
 				  Suppliers="@suppliers"
 				  Employees="@employees" />
+
+<button class="btn btn-primary mt-3" @onclick="ToggleExportForm">
+	<i class="bi bi-download me-1"></i> Export Data
+</button>
+
+@if (showExportForm)
+{
+	<div class="card mt-3">
+		<div class="card-header">
+			<h5>Export Supply Orders</h5>
+		</div>
+		<div class="card-body">
+			<div class="row">
+				<div class="col-md-4 mb-3">
+					<label>Export Format</label>
+					<select class="form-select" @bind="exportFormat">
+						<option value="@ExportFormat.CSV">CSV</option>
+						<option value="@ExportFormat.JSON">JSON</option>
+					</select>
+				</div>
+				<div class="col-md-4 mb-3">
+					<label>Export Scope</label>
+					<select class="form-select" @bind="exportScope">
+						<option value="filtered">Filtered Orders</option>
+						<option value="all">All Orders</option>
+					</select>
+				</div>
+				<div class="col-md-4 mb-3">
+					<label>Detail Level</label>
+					<select class="form-select" @bind="exportDetailLevel">
+						<option value="basic">Basic Info</option>
+						<option value="detailed">With Equipment Details</option>
+						<option value="full">Full Details with Placements</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="mb-3">
+				<label>Columns to Include</label>
+				<div class="row">
+					<div class="col-md-3">
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="chkOrderNumber" @bind="includeOrderNumber">
+							<label class="form-check-label" for="chkOrderNumber">Order Number</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="chkOrderDate" @bind="includeOrderDate">
+							<label class="form-check-label" for="chkOrderDate">Order Date</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="chkSupplier" @bind="includeSupplier">
+							<label class="form-check-label" for="chkSupplier">Supplier</label>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="chkStatus" @bind="includeStatus">
+							<label class="form-check-label" for="chkStatus">Status</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="chkEmployee" @bind="includeEmployee">
+							<label class="form-check-label" for="chkEmployee">Employee</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="chkTotalAmount" @bind="includeTotalAmount">
+							<label class="form-check-label" for="chkTotalAmount">Total Amount</label>
+						</div>
+					</div>
+					<div class="col-md-3">
+						@if (exportDetailLevel != "basic")
+						{
+							<div class="form-check">
+								<input class="form-check-input" type="checkbox" id="chkEquipment" @bind="includeEquipment">
+								<label class="form-check-label" for="chkEquipment">Equipment Details</label>
+							</div>
+							<div class="form-check">
+								<input class="form-check-input" type="checkbox" id="chkBrand" @bind="includeBrand">
+								<label class="form-check-label" for="chkBrand">Brand</label>
+							</div>
+							<div class="form-check">
+								<input class="form-check-input" type="checkbox" id="chkCategory" @bind="includeCategory">
+								<label class="form-check-label" for="chkCategory">Category</label>
+							</div>
+						}
+					</div>
+					<div class="col-md-3">
+						@if (exportDetailLevel == "full")
+						{
+							<div class="form-check">
+								<input class="form-check-input" type="checkbox" id="chkPlacements" @bind="includePlacements">
+								<label class="form-check-label" for="chkPlacements">Placement Details</label>
+							</div>
+							<div class="form-check">
+								<input class="form-check-input" type="checkbox" id="chkClub" @bind="includeClub">
+								<label class="form-check-label" for="chkClub">Club</label>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+
+			<div class="d-flex justify-content-end">
+				<button class="btn btn-secondary me-2" @onclick="ToggleExportForm">Close</button>
+				<button class="btn btn-primary" @onclick="ExportData" disabled="@isExporting">
+					@if (isExporting)
+					{
+						<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+						<span>Exporting...</span>
+					}
+					else
+					{
+						<span>Export</span>
+					}
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
 
 <div class="table-container">
 	<div class="table-responsive">
@@ -204,21 +329,21 @@
 	private int pageSize = 10;
 
 	private IEnumerable<SupplyOrderViewModel> FilteredOrders =>
-		orders.Where(o =>
-			(string.IsNullOrWhiteSpace(searchQuery) ||
-				o.SupplyOrderNumber.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-				o.SupplierName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-				o.StatusName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-				o.EmployeeName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
-			(statusFilter == 0 || o.StatusId == statusFilter) &&
-			(supplierFilter == 0 || o.SupplierId == supplierFilter) &&
-			(employeeFilter == 0 || o.EmployeeId == employeeFilter) &&
-			(!dateFromFilter.HasValue || o.OrderDate.Date >= dateFromFilter.Value.Date) &&
-			(!dateToFilter.HasValue || o.OrderDate.Date <= dateToFilter.Value.Date)
-		);
+	orders.Where(o =>
+	(string.IsNullOrWhiteSpace(searchQuery) ||
+	o.SupplyOrderNumber.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+	o.SupplierName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+	o.StatusName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+	o.EmployeeName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+	(statusFilter == 0 || o.StatusId == statusFilter) &&
+	(supplierFilter == 0 || o.SupplierId == supplierFilter) &&
+	(employeeFilter == 0 || o.EmployeeId == employeeFilter) &&
+	(!dateFromFilter.HasValue || o.OrderDate.Date >= dateFromFilter.Value.Date) &&
+	(!dateToFilter.HasValue || o.OrderDate.Date <= dateToFilter.Value.Date)
+	);
 
 	private IEnumerable<SupplyOrderViewModel> PaginatedOrders =>
-		FilteredOrders.Skip((currentPage - 1) * pageSize).Take(pageSize);
+	FilteredOrders.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
 	private int TotalPages => (int)Math.Ceiling(FilteredOrders.Count() / (double)pageSize);
 
@@ -233,6 +358,376 @@
 			return;
 
 		currentPage = page;
+	}
+
+	// Add these variables to the @code section
+	private bool showExportForm = false;
+	private ExportFormat exportFormat = ExportFormat.CSV;
+	private string exportScope = "filtered";
+	private string exportDetailLevel = "basic";
+	private bool isExporting = false;
+
+	// Column selection
+	private bool includeOrderNumber = true;
+	private bool includeOrderDate = true;
+	private bool includeSupplier = true;
+	private bool includeStatus = true;
+	private bool includeEmployee = true;
+	private bool includeTotalAmount = true;
+	private bool includeEquipment = true;
+	private bool includeBrand = true;
+	private bool includeCategory = true;
+	private bool includeType = true;
+	private bool includePlacements = true;
+	private bool includeClub = true;
+
+	private void ToggleExportForm()
+	{
+		showExportForm = !showExportForm;
+	}
+
+	private async Task ExportData()
+	{
+		isExporting = true;
+		try
+		{
+			var fileName = $"supply_orders_{DateTime.Now:yyyyMMdd_HHmmss}";
+			var fileExtension = exportFormat == ExportFormat.CSV ? "csv" : "json";
+
+			// Determine which orders to export
+			var ordersToExport = exportScope == "filtered" ? FilteredOrders : orders;
+
+			string content = "";
+			string contentType = "";
+			// Prepare data for export based on detail level
+			if (exportDetailLevel == "basic")
+			{
+				var basicData = ordersToExport.Select(o => new
+				{
+					OrderNumber = includeOrderNumber ? o.SupplyOrderNumber : null,
+					OrderDate = includeOrderDate ? o.OrderDate.ToShortDateString() : null,
+					Supplier = includeSupplier ? o.SupplierName : null,
+					Status = includeStatus ? o.StatusName : null,
+					Employee = includeEmployee ? o.EmployeeName : null,
+					TotalAmount = includeTotalAmount ? o.TotalAmount : (decimal?)null
+				});
+
+				// Define the properties to include
+				var properties = new Dictionary<string, Func<object, object>>();
+				if (includeOrderNumber) properties.Add("Order Number", o => ((dynamic)o).OrderNumber);
+				if (includeOrderDate) properties.Add("Order Date", o => ((dynamic)o).OrderDate);
+				if (includeSupplier) properties.Add("Supplier", o => ((dynamic)o).Supplier);
+				if (includeStatus) properties.Add("Status", o => ((dynamic)o).Status);
+				if (includeEmployee) properties.Add("Employee", o => ((dynamic)o).Employee);
+				if (includeTotalAmount) properties.Add("Total Amount", o => ((dynamic)o).TotalAmount);
+
+				// Export the data
+				if (exportFormat == ExportFormat.CSV)
+				{
+					content = ExportService.ExportToCsv(basicData, properties);
+					contentType = "text/csv";
+				}
+				else
+				{
+					content = ExportService.ExportToJson(basicData, properties);
+					contentType = "application/json";
+				}
+			}
+			else if (exportDetailLevel == "detailed")
+			{
+				var detailedData = ordersToExport.Select(o => new
+				{
+					OrderNumber = includeOrderNumber ? o.SupplyOrderNumber : null,
+					OrderDate = includeOrderDate ? o.OrderDate.ToShortDateString() : null,
+					Supplier = includeSupplier ? o.SupplierName : null,
+					Status = includeStatus ? o.StatusName : null,
+					Employee = includeEmployee ? o.EmployeeName : null,
+					TotalAmount = includeTotalAmount ? o.TotalAmount : (decimal?)null,
+					Equipment = includeEquipment ? o.SuppliedEquipmentItems.Select(e => new
+					{
+						Name = e.EquipmentName,
+						Brand = includeBrand ? brands.FirstOrDefault(b => b.brand_id == equipmentList.FirstOrDefault(eq => eq.equipment_id == e.EquipmentId)?.brand_id)?.brand_name : null,
+						Category = includeCategory ? categories.FirstOrDefault(c => c.category_id == equipmentList.FirstOrDefault(eq => eq.equipment_id == e.EquipmentId)?.category_id)?.category_name : null,
+						Type = includeType ? types.FirstOrDefault(t => t.type_id == equipmentList.FirstOrDefault(eq => eq.equipment_id == e.EquipmentId)?.type_id)?.type_name : null,
+						Model = equipmentList.FirstOrDefault(eq => eq.equipment_id == e.EquipmentId)?.model,
+						Quantity = e.Quantity,
+						Price = e.Price
+					}).ToList() : null
+				});
+
+				if (exportFormat == ExportFormat.JSON)
+				{
+					content = System.Text.Json.JsonSerializer.Serialize(detailedData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+					contentType = "application/json";
+				}
+				else
+				{
+					// For CSV we need to flatten the structure
+					var flattenedData = new List<object>();
+
+					foreach (var order in detailedData)
+					{
+						if (order.Equipment != null && order.Equipment.Any())
+						{
+							foreach (var equipment in order.Equipment)
+							{
+								flattenedData.Add(new
+								{
+									OrderNumber = order.OrderNumber,
+									OrderDate = order.OrderDate,
+									Supplier = order.Supplier,
+									Status = order.Status,
+									Employee = order.Employee,
+									TotalAmount = order.TotalAmount,
+									EquipmentName = equipment.Name,
+									Brand = equipment.Brand,
+									Category = equipment.Category,
+									Type = equipment.Type,
+									Model = equipment.Model,
+									Quantity = equipment.Quantity,
+									Price = equipment.Price
+								});
+							}
+						}
+						else
+						{
+							flattenedData.Add(new
+							{
+								OrderNumber = order.OrderNumber,
+								OrderDate = order.OrderDate,
+								Supplier = order.Supplier,
+								Status = order.Status,
+								Employee = order.Employee,
+								TotalAmount = order.TotalAmount,
+								EquipmentName = (string)null,
+								Brand = (string)null,
+								Category = (string)null,
+								Type = (string)null,
+								Model = (string)null,
+								Quantity = (int?)null,
+								Price = (decimal?)null
+							});
+						}
+					}
+
+					var properties = new Dictionary<string, Func<object, object>>();
+					if (includeOrderNumber) properties.Add("Order Number", o => ((dynamic)o).OrderNumber);
+					if (includeOrderDate) properties.Add("Order Date", o => ((dynamic)o).OrderDate);
+					if (includeSupplier) properties.Add("Supplier", o => ((dynamic)o).Supplier);
+					if (includeStatus) properties.Add("Status", o => ((dynamic)o).Status);
+					if (includeEmployee) properties.Add("Employee", o => ((dynamic)o).Employee);
+					if (includeTotalAmount) properties.Add("Total Amount", o => ((dynamic)o).TotalAmount);
+					if (includeEquipment) properties.Add("Equipment Name", o => ((dynamic)o).EquipmentName);
+					if (includeBrand) properties.Add("Brand", o => ((dynamic)o).Brand);
+					if (includeCategory) properties.Add("Category", o => ((dynamic)o).Category);
+					if (includeType) properties.Add("Type", o => ((dynamic)o).Type);
+					properties.Add("Model", o => ((dynamic)o).Model);
+					properties.Add("Quantity", o => ((dynamic)o).Quantity);
+					properties.Add("Price", o => ((dynamic)o).Price);
+
+					content = ExportService.ExportToCsv(flattenedData, properties);
+					contentType = "text/csv";
+				}
+			}
+			else // full details
+			{
+				var fullData = new List<object>();
+
+				foreach (var order in ordersToExport)
+				{
+					var orderData = new Dictionary<string, object>();
+
+					if (includeOrderNumber) orderData["OrderNumber"] = order.SupplyOrderNumber;
+					if (includeOrderDate) orderData["OrderDate"] = order.OrderDate.ToShortDateString();
+					if (includeSupplier) orderData["Supplier"] = order.SupplierName;
+					if (includeStatus) orderData["Status"] = order.StatusName;
+					if (includeEmployee) orderData["Employee"] = order.EmployeeName;
+					if (includeTotalAmount) orderData["TotalAmount"] = order.TotalAmount;
+
+					if (includeEquipment && order.SuppliedEquipmentItems.Any())
+					{
+						var equipmentList = new List<object>();
+
+						foreach (var equipment in order.SuppliedEquipmentItems)
+						{
+							var equipmentData = new Dictionary<string, object>();
+							equipmentData["Name"] = equipment.EquipmentName;
+
+							var equipDetails = this.equipmentList.FirstOrDefault(eq => eq.equipment_id == equipment.EquipmentId);
+							if (equipDetails != null)
+							{
+								if (includeBrand) equipmentData["Brand"] = brands.FirstOrDefault(b => b.brand_id == equipDetails.brand_id)?.brand_name;
+								if (includeCategory) equipmentData["Category"] = categories.FirstOrDefault(c => c.category_id == equipDetails.category_id)?.category_name;
+								if (includeType) equipmentData["Type"] = types.FirstOrDefault(t => t.type_id == equipDetails.type_id)?.type_name;
+								equipmentData["Model"] = equipDetails.model;
+							}
+
+							equipmentData["Quantity"] = equipment.Quantity;
+							equipmentData["Price"] = equipment.Price;
+
+							if (includePlacements && equipment.Placements.Any())
+							{
+								var placementList = new List<object>();
+
+								foreach (var placement in equipment.Placements)
+								{
+									var placementData = new Dictionary<string, object>();
+									placementData["PlacementDate"] = placement.PlacementDate.ToShortDateString();
+									placementData["Quantity"] = placement.Quantity;
+									placementData["Employee"] = placement.EmployeeName;
+
+									if (includeClub) placementData["Club"] = placement.ClubName;
+
+									placementList.Add(placementData);
+								}
+
+								equipmentData["Placements"] = placementList;
+							}
+
+							equipmentList.Add(equipmentData);
+						}
+
+						orderData["Equipment"] = equipmentList;
+					}
+
+					fullData.Add(orderData);
+				}
+
+				if (exportFormat == ExportFormat.JSON)
+				{
+					content = System.Text.Json.JsonSerializer.Serialize(fullData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+					contentType = "application/json";
+
+				}
+				else
+				{
+					// For CSV we need to flatten the nested structure completely
+					var flattenedData = new List<object>();
+
+					foreach (var orderObj in fullData)
+					{
+						var order = (Dictionary<string, object>)orderObj;
+
+						if (order.ContainsKey("Equipment") && order["Equipment"] is List<object> equipmentList && equipmentList.Any())
+						{
+							foreach (var equipObj in equipmentList)
+							{
+								var equipment = (Dictionary<string, object>)equipObj;
+
+								if (equipment.ContainsKey("Placements") && equipment["Placements"] is List<object> placementList && placementList.Any())
+								{
+									foreach (var placementObj in placementList)
+									{
+										var placement = (Dictionary<string, object>)placementObj;
+
+										var row = new Dictionary<string, object>();
+										if (includeOrderNumber && order.ContainsKey("OrderNumber")) row["OrderNumber"] = order["OrderNumber"];
+										if (includeOrderDate && order.ContainsKey("OrderDate")) row["OrderDate"] = order["OrderDate"];
+										if (includeSupplier && order.ContainsKey("Supplier")) row["Supplier"] = order["Supplier"];
+										if (includeStatus && order.ContainsKey("Status")) row["Status"] = order["Status"];
+										if (includeEmployee && order.ContainsKey("Employee")) row["Employee"] = order["Employee"];
+										if (includeTotalAmount && order.ContainsKey("TotalAmount")) row["TotalAmount"] = order["TotalAmount"];
+
+										if (includeEquipment) row["EquipmentName"] = equipment["Name"];
+										if (includeBrand && equipment.ContainsKey("Brand")) row["Brand"] = equipment["Brand"];
+										if (includeCategory && equipment.ContainsKey("Category")) row["Category"] = equipment["Category"];
+										if (includeType && equipment.ContainsKey("Type")) row["Type"] = equipment["Type"];
+										row["Model"] = equipment.ContainsKey("Model") ? equipment["Model"] : null;
+										row["EquipmentQuantity"] = equipment["Quantity"];
+										row["EquipmentPrice"] = equipment["Price"];
+
+										row["PlacementDate"] = placement["PlacementDate"];
+										row["PlacementQuantity"] = placement["Quantity"];
+										row["PlacementEmployee"] = placement["Employee"];
+										if (includeClub && placement.ContainsKey("Club")) row["Club"] = placement["Club"];
+
+										flattenedData.Add(row);
+									}
+								}
+								else
+								{
+									var row = new Dictionary<string, object>();
+									if (includeOrderNumber && order.ContainsKey("OrderNumber")) row["OrderNumber"] = order["OrderNumber"];
+									if (includeOrderDate && order.ContainsKey("OrderDate")) row["OrderDate"] = order["OrderDate"];
+									if (includeSupplier && order.ContainsKey("Supplier")) row["Supplier"] = order["Supplier"];
+									if (includeStatus && order.ContainsKey("Status")) row["Status"] = order["Status"];
+									if (includeEmployee && order.ContainsKey("Employee")) row["Employee"] = order["Employee"];
+									if (includeTotalAmount && order.ContainsKey("TotalAmount")) row["TotalAmount"] = order["TotalAmount"];
+
+									if (includeEquipment) row["EquipmentName"] = equipment["Name"];
+									if (includeBrand && equipment.ContainsKey("Brand")) row["Brand"] = equipment["Brand"];
+									if (includeCategory && equipment.ContainsKey("Category")) row["Category"] = equipment["Category"];
+									if (includeType && equipment.ContainsKey("Type")) row["Type"] = equipment["Type"];
+									row["Model"] = equipment.ContainsKey("Model") ? equipment["Model"] : null;
+									row["EquipmentQuantity"] = equipment["Quantity"];
+									row["EquipmentPrice"] = equipment["Price"];
+
+									row["PlacementDate"] = null;
+									row["PlacementQuantity"] = null;
+									row["PlacementEmployee"] = null;
+									if (includeClub) row["Club"] = null;
+
+									flattenedData.Add(row);
+								}
+							}
+						}
+						else
+						{
+							var row = new Dictionary<string, object>();
+							if (includeOrderNumber && order.ContainsKey("OrderNumber")) row["OrderNumber"] = order["OrderNumber"];
+							if (includeOrderDate && order.ContainsKey("OrderDate")) row["OrderDate"] = order["OrderDate"];
+							if (includeSupplier && order.ContainsKey("Supplier")) row["Supplier"] = order["Supplier"];
+							if (includeStatus && order.ContainsKey("Status")) row["Status"] = order["Status"];
+							if (includeEmployee && order.ContainsKey("Employee")) row["Employee"] = order["Employee"];
+							if (includeTotalAmount && order.ContainsKey("TotalAmount")) row["TotalAmount"] = order["TotalAmount"];
+
+							flattenedData.Add(row);
+						}
+					}
+
+					var properties = new Dictionary<string, Func<object, object>>();
+					if (includeOrderNumber) properties.Add("Order Number", o => ((Dictionary<string, object>)o).ContainsKey("OrderNumber") ? ((Dictionary<string, object>)o)["OrderNumber"] : null);
+					if (includeOrderDate) properties.Add("Order Date", o => ((Dictionary<string, object>)o).ContainsKey("OrderDate") ? ((Dictionary<string, object>)o)["OrderDate"] : null);
+					if (includeSupplier) properties.Add("Supplier", o => ((Dictionary<string, object>)o).ContainsKey("Supplier") ? ((Dictionary<string, object>)o)["Supplier"] : null);
+					if (includeStatus) properties.Add("Status", o => ((Dictionary<string, object>)o).ContainsKey("Status") ? ((Dictionary<string, object>)o)["Status"] : null);
+					if (includeEmployee) properties.Add("Employee", o => ((Dictionary<string, object>)o).ContainsKey("Employee") ? ((Dictionary<string, object>)o)["Employee"] : null);
+					if (includeTotalAmount) properties.Add("Total Amount", o => ((Dictionary<string, object>)o).ContainsKey("TotalAmount") ? ((Dictionary<string, object>)o)["TotalAmount"] : null);
+
+					if (includeEquipment) properties.Add("Equipment Name", o => ((Dictionary<string, object>)o).ContainsKey("EquipmentName") ? ((Dictionary<string, object>)o)["EquipmentName"] : null);
+					if (includeBrand) properties.Add("Brand", o => ((Dictionary<string, object>)o).ContainsKey("Brand") ? ((Dictionary<string, object>)o)["Brand"] : null);
+					if (includeCategory) properties.Add("Category", o => ((Dictionary<string, object>)o).ContainsKey("Category") ? ((Dictionary<string, object>)o)["Category"] : null);
+					if (includeType) properties.Add("Type", o => ((Dictionary<string, object>)o).ContainsKey("Type") ? ((Dictionary<string, object>)o)["Type"] : null);
+					properties.Add("Model", o => ((Dictionary<string, object>)o).ContainsKey("Model") ? ((Dictionary<string, object>)o)["Model"] : null);
+					properties.Add("Equipment Quantity", o => ((Dictionary<string, object>)o).ContainsKey("EquipmentQuantity") ? ((Dictionary<string, object>)o)["EquipmentQuantity"] : null);
+					properties.Add("Equipment Price", o => ((Dictionary<string, object>)o).ContainsKey("EquipmentPrice") ? ((Dictionary<string, object>)o)["EquipmentPrice"] : null);
+
+					properties.Add("Placement Date", o => ((Dictionary<string, object>)o).ContainsKey("PlacementDate") ? ((Dictionary<string, object>)o)["PlacementDate"] : null);
+					properties.Add("Placement Quantity", o => ((Dictionary<string, object>)o).ContainsKey("PlacementQuantity") ? ((Dictionary<string, object>)o)["PlacementQuantity"] : null);
+					properties.Add("Placement Employee", o => ((Dictionary<string, object>)o).ContainsKey("PlacementEmployee") ? ((Dictionary<string, object>)o)["PlacementEmployee"] : null);
+					if (includeClub) properties.Add("Club", o => ((Dictionary<string, object>)o).ContainsKey("Club") ? ((Dictionary<string, object>)o)["Club"] : null);
+
+					content = ExportService.ExportToCsv(flattenedData, properties);
+					contentType = "text/csv";
+				}
+
+			}
+
+			await BlazorDownloadFileService.DownloadFileFromText(
+			$"{fileName}.{fileExtension}",
+			content,
+			System.Text.Encoding.UTF8,
+			contentType);
+
+			Snackbar.Add($"Export completed successfully!", MudBlazor.Severity.Success);
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Export failed: {ex.Message}", MudBlazor.Severity.Error);
+		}
+		finally
+		{
+			isExporting = false;
+		}
 	}
 
 	private async Task LoadData()
@@ -254,18 +749,18 @@
 			var brandsResponse = await ApiFacade.BrandApiService.Get();
 
 			if (!supplyOrdersResponse.IsSuccessStatusCode ||
-				!suppliersResponse.IsSuccessStatusCode ||
-				!statusesResponse.IsSuccessStatusCode ||
-				!employeesResponse.IsSuccessStatusCode ||
-				!equipmentResponse.IsSuccessStatusCode ||
-				!suppliedEquipmentsResponse.IsSuccessStatusCode ||
-				!positionsResponse.IsSuccessStatusCode ||
-				!categoriesResponse.IsSuccessStatusCode ||
-				!productPlacementsResponse.IsSuccessStatusCode ||
-				!availableEquipmentsResponse.IsSuccessStatusCode ||
-				!clubsResponse.IsSuccessStatusCode ||
-				!typesResponse.IsSuccessStatusCode ||
-				!brandsResponse.IsSuccessStatusCode)
+			!suppliersResponse.IsSuccessStatusCode ||
+			!statusesResponse.IsSuccessStatusCode ||
+			!employeesResponse.IsSuccessStatusCode ||
+			!equipmentResponse.IsSuccessStatusCode ||
+			!suppliedEquipmentsResponse.IsSuccessStatusCode ||
+			!positionsResponse.IsSuccessStatusCode ||
+			!categoriesResponse.IsSuccessStatusCode ||
+			!productPlacementsResponse.IsSuccessStatusCode ||
+			!availableEquipmentsResponse.IsSuccessStatusCode ||
+			!clubsResponse.IsSuccessStatusCode ||
+			!typesResponse.IsSuccessStatusCode ||
+			!brandsResponse.IsSuccessStatusCode)
 			{
 				Snackbar.Add("Failed to load some data. Please refresh the page.", MudBlazor.Severity.Error);
 				return;
@@ -328,18 +823,18 @@
 	private List<SuppliedEquipmentViewModel> GetSuppliedEquipmentItems(int supplyOrderId)
 	{
 		var equipmentItems = suppliedEquipments
-			.Where(se => se.supply_order_id == supplyOrderId)
-			.Select(se => new SuppliedEquipmentViewModel
-				{
-					SuppliedEquipmentId = se.supplied_equipment_id,
-					SupplyOrderId = se.supply_order_id,
-					EquipmentId = se.equipment_id,
-					EquipmentName = equipmentList.FirstOrDefault(e => e.equipment_id == se.equipment_id)?.name ?? "Unknown",
-					Quantity = se.quantity,
-					Price = se.price,
-					IsExisting = true,
-					Placements = GetPlacements(se.supplied_equipment_id)
-				}).ToList();
+		.Where(se => se.supply_order_id == supplyOrderId)
+		.Select(se => new SuppliedEquipmentViewModel
+			{
+				SuppliedEquipmentId = se.supplied_equipment_id,
+				SupplyOrderId = se.supply_order_id,
+				EquipmentId = se.equipment_id,
+				EquipmentName = equipmentList.FirstOrDefault(e => e.equipment_id == se.equipment_id)?.name ?? "Unknown",
+				Quantity = se.quantity,
+				Price = se.price,
+				IsExisting = true,
+				Placements = GetPlacements(se.supplied_equipment_id)
+			}).ToList();
 
 		return equipmentItems;
 	}
@@ -347,23 +842,23 @@
 	private List<PlacementViewModel> GetPlacements(int suppliedEquipmentId)
 	{
 		return productPlacements
-			.Where(pp => pp.supplied_equipment_id == suppliedEquipmentId)
-			.Select(pp =>
-			{
-				var availableEquipment = availableEquipments.FirstOrDefault(ae => ae.available_id == pp.available_id);
-				return new PlacementViewModel
-					{
-						PlacementId = pp.placement_id,
-						PlacementDate = pp.placement_date,
-						Quantity = pp.quantity,
-						EmployeeId = pp.employee_id,
-						EmployeeName = GetEmployeeName(pp.employee_id),
-						ClubId = availableEquipment?.club_id ?? 0,
-						ClubName = clubs.FirstOrDefault(c => c.club_id == availableEquipment?.club_id)?.name ?? "Unknown",
-						AvailableId = pp.available_id,
-						IsExisting = true
-					};
-			}).ToList();
+		.Where(pp => pp.supplied_equipment_id == suppliedEquipmentId)
+		.Select(pp =>
+		{
+			var availableEquipment = availableEquipments.FirstOrDefault(ae => ae.available_id == pp.available_id);
+			return new PlacementViewModel
+				{
+					PlacementId = pp.placement_id,
+					PlacementDate = pp.placement_date,
+					Quantity = pp.quantity,
+					EmployeeId = pp.employee_id,
+					EmployeeName = GetEmployeeName(pp.employee_id),
+					ClubId = availableEquipment?.club_id ?? 0,
+					ClubName = clubs.FirstOrDefault(c => c.club_id == availableEquipment?.club_id)?.name ?? "Unknown",
+					AvailableId = pp.available_id,
+					IsExisting = true
+				};
+		}).ToList();
 	}
 
 	private string GetStatusBadgeClass(string statusName)
@@ -578,14 +1073,14 @@
 
 				// Process deleted items
 				var currentEquipmentIds = selectedOrder.SuppliedEquipmentItems
-					.Where(i => i.IsExisting)
-					.Select(i => i.SuppliedEquipmentId)
-					.ToList();
+				.Where(i => i.IsExisting)
+				.Select(i => i.SuppliedEquipmentId)
+				.ToList();
 
 				var itemsToDelete = suppliedEquipments
-					.Where(se => se.supply_order_id == selectedOrder.SupplyOrderId)
-					.Where(se => !currentEquipmentIds.Contains(se.supplied_equipment_id))
-					.ToList();
+				.Where(se => se.supply_order_id == selectedOrder.SupplyOrderId)
+				.Where(se => !currentEquipmentIds.Contains(se.supplied_equipment_id))
+				.ToList();
 
 				foreach (var item in itemsToDelete)
 				{
@@ -615,7 +1110,7 @@
 
 					if (item.SuppliedEquipmentId > 0 && item.IsExisting)
 					{
-						var response =await ApiFacade.SuppliedEquipmentApiService.Update(suppliedEquipment.supplied_equipment_id, suppliedEquipment);
+						var response = await ApiFacade.SuppliedEquipmentApiService.Update(suppliedEquipment.supplied_equipment_id, suppliedEquipment);
 						if (response.IsSuccessStatusCode)
 						{
 							Snackbar.Add("Successful to Update SuppliedEquipment record", MudBlazor.Severity.Success);
@@ -647,7 +1142,7 @@
 							{
 								// If there's no available equipment record for this club and equipment, create one
 								var availableEquipment = availableEquipments.FirstOrDefault(ae =>
-									ae.equipment_id == item.EquipmentId && ae.club_id == placement.ClubId);
+								ae.equipment_id == item.EquipmentId && ae.club_id == placement.ClubId);
 
 								if (availableEquipment == null)
 								{
@@ -714,9 +1209,9 @@
 
 					// Process placements from EquipmentManagementPanel
 					var panelPlacements = productPlacements
-						.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId &&
-										!p.CreateDatetime.HasValue)
-						.ToList();
+					.Where(p => p.supplied_equipment_id == item.SuppliedEquipmentId &&
+					!p.CreateDatetime.HasValue)
+					.ToList();
 
 					foreach (var placement in panelPlacements)
 					{

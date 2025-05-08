@@ -28,12 +28,3 @@ public class ExportSuppliersModel
     [Display(Name = "Застосувати поточні фільтри")]
     public bool ApplyCurrentFilters { get; set; } = true;
 }
-
-public enum ExportFormat
-{
-    [Display(Name = "CSV")]
-    CSV,
-
-    [Display(Name = "JSON")]
-    JSON
-}
