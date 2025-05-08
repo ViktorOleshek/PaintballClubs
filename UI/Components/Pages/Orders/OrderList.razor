@@ -15,11 +15,13 @@
 	<div class="row mb-3">
 		<div class="col-12 d-flex justify-content-between align-items-center">
 			<h4>Orders</h4>
-			<button class="btn btn-primary" @onclick="CreateNewOrder">
+			<button class="btn btn-primary" @onclick="OpenAddOrderForm">
 				<i class="bi bi-plus-lg me-1"></i> NEW ORDER
 			</button>
 		</div>
 	</div>
+
+	<OrderAddComponent @bind-showAddForm="showAddForm" OnOrderAdded="LoadData" />
 
 	<div class="row mb-3">
 		<div class="col-12 col-md-6 col-lg-4">
@@ -331,6 +333,14 @@
 		await LoadData();
 	}
 
+	private bool showAddForm = false;
+
+	// Add button method
+	private void OpenAddOrderForm()
+	{
+		showAddForm = true;
+	}
+
 	private HashSet<int> expandedOrderDetails = new HashSet<int>();
 	private void ToggleDetails(int orderId)
 	{
@@ -606,11 +616,6 @@
 				await ShowToast("Failed to delete order", "danger");
 			}
 		}
-	}
-
-	private void CreateNewOrder()
-	{
-		NavigationManager.NavigateTo("/orders/create");
 	}
 
 	// Order editing methods
