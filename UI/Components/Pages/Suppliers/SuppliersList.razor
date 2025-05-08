@@ -2,6 +2,7 @@
 @using BlazorDownloadFile
 @using Domain.Entities
 @using Services.Export
+@using Services.Export.Model
 @using UI.Components.Pages.SupplyOrders.Component
 @using Services.ExternalApi.Facade
 @using System.ComponentModel.DataAnnotations
@@ -19,9 +20,14 @@
 	<div class="card-header">
 		<div class="d-flex justify-content-between align-items-center mb-2">
 			<h5 class="mb-0">Фільтри</h5>
-			<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
-				<i class="bi bi-plus-circle"></i> Додати постачальника
-			</button>
+			<div>
+				<button class="btn btn-info btn-sm me-2" @onclick="ToggleExportForm">
+					<i class="bi bi-download"></i> Експорт
+				</button>
+				<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
+					<i class="bi bi-plus-circle"></i> Додати постачальника
+				</button>
+			</div>
 		</div>
 		<div class="row g-2">
 			<div class="col-md-3">
@@ -92,6 +98,91 @@
 						<div class="d-flex justify-content-end gap-2">
 							<button type="button" class="btn btn-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
 							<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+						</div>
+					</div>
+				</div>
+			</EditForm>
+		</div>
+	</div>
+}
+
+@if (showExportForm)
+{
+	<div class="card mb-3">
+		<div class="card-header d-flex justify-content-between">
+			<span>Експорт даних постачальників</span>
+			<button type="button" class="btn-close" @onclick="ToggleExportForm"></button>
+		</div>
+		<div class="card-body">
+			<EditForm Model="exportModel" OnValidSubmit="PerformExport">
+				<div class="row g-2">
+					<div class="col-md-6">
+						<div class="card">
+							<div class="card-header">
+								<h6 class="mb-0">Вибір полів</h6>
+							</div>
+							<div class="card-body">
+								<div class="form-check">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.IncludeName" id="includeName" />
+									<label class="form-check-label" for="includeName">Назва</label>
+								</div>
+								<div class="form-check">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.IncludePhone" id="includePhone" />
+									<label class="form-check-label" for="includePhone">Телефон</label>
+								</div>
+								<div class="form-check">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.IncludeEmail" id="includeEmail" />
+									<label class="form-check-label" for="includeEmail">Email</label>
+								</div>
+								<div class="form-check">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.IncludeAddress" id="includeAddress" />
+									<label class="form-check-label" for="includeAddress">Адреса</label>
+								</div>
+								<div class="form-check">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.IncludeEquipmentCount" id="includeEquipmentCount" />
+									<label class="form-check-label" for="includeEquipmentCount">Кількість обладнання</label>
+								</div>
+								<div class="form-check">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.IncludeLastSupplyDate" id="includeLastSupplyDate" />
+									<label class="form-check-label" for="includeLastSupplyDate">Дата останньої поставки</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6">
+						<div class="card">
+							<div class="card-header">
+								<h6 class="mb-0">Налаштування експорту</h6>
+							</div>
+							<div class="card-body">
+								<div class="mb-3">
+									<label class="form-label">Формат файлу</label>
+									<div>
+										<div class="form-check form-check-inline">
+											<input type="radio" class="form-check-input" name="fileFormat"
+												   value="@ExportFormat.CSV" checked="@(exportModel.FileFormat == ExportFormat.CSV)"
+												   @onchange="@(e => exportModel.FileFormat = ExportFormat.CSV)" id="formatCsv" />
+											<label class="form-check-label" for="formatCsv">CSV</label>
+										</div>
+										<div class="form-check form-check-inline">
+											<input type="radio" class="form-check-input" name="fileFormat"
+												   value="@ExportFormat.JSON" checked="@(exportModel.FileFormat == ExportFormat.JSON)"
+												   @onchange="@(e => exportModel.FileFormat = ExportFormat.JSON)" id="formatJson" />
+											<label class="form-check-label" for="formatJson">JSON</label>
+										</div>
+									</div>
+								</div>
+								<div class="form-check mb-3">
+									<InputCheckbox class="form-check-input" @bind-Value="exportModel.ApplyCurrentFilters" id="applyFilters" />
+									<label class="form-check-label" for="applyFilters">Застосувати поточні фільтри</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-12">
+						<div class="d-flex justify-content-end gap-2">
+							<button type="button" class="btn btn-secondary btn-sm" @onclick="ToggleExportForm">Скасувати</button>
+							<button type="submit" class="btn btn-primary btn-sm">Експортувати</button>
 						</div>
 					</div>
 				</div>
@@ -382,10 +473,92 @@
 	{
 		await LoadData();
 	}
+	private bool showExportForm = false;
+	private ExportSuppliersModel exportModel = new ExportSuppliersModel();
+
+	private void ToggleExportForm()
+	{
+		showExportForm = !showExportForm;
+		if (showExportForm)
+		{
+			// Скидаємо модель експорту до дефолтних значень
+			exportModel = new ExportSuppliersModel();
+		}
+	}
 
 	private async Task ExportSuppliers()
 	{
+		// Просто відкрити форму експорту
+		showExportForm = true;
+		StateHasChanged();
+	}
 
+	private async Task PerformExport()
+	{
+		try
+		{
+			// Вибираємо потрібні дані відповідно до фільтрів
+			var data = exportModel.ApplyCurrentFilters ? FilteredSuppliers : suppliers;
+
+			// Створюємо словник властивостей для експорту
+			var properties = new Dictionary<string, Func<Supplier, object>>();
+
+			if (exportModel.IncludeName)
+				properties.Add("Назва", s => s.name ?? string.Empty);
+
+			if (exportModel.IncludePhone)
+				properties.Add("Телефон", s => s.phone_number ?? string.Empty);
+
+			if (exportModel.IncludeEmail)
+				properties.Add("Email", s => s.email ?? string.Empty);
+
+			if (exportModel.IncludeAddress)
+				properties.Add("Адреса", s => s.address ?? string.Empty);
+
+			if (exportModel.IncludeEquipmentCount)
+				properties.Add("Кількість обладнання", s => supplierEquipmentCount.GetValueOrDefault(s.supplier_id, 0));
+
+			if (exportModel.IncludeLastSupplyDate)
+				properties.Add("Дата останньої поставки", s => supplierLastSupplyDate.GetValueOrDefault(s.supplier_id, null)?.ToString("dd.MM.yyyy") ?? string.Empty);
+
+			if (properties.Count == 0)
+			{
+				Snackbar.Add("Оберіть хоча б одне поле для експорту", MudBlazor.Severity.Warning);
+				return;
+			}
+
+			string fileName;
+			string fileContent;
+			string contentType;
+
+			// Експортуємо дані у вибраному форматі
+			if (exportModel.FileFormat == ExportFormat.CSV)
+			{
+				fileContent = ExportService.ExportToCsv(data, properties);
+				fileName = $"suppliers_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+				contentType = "text/csv";
+			}
+			else // JSON
+			{
+				fileContent = ExportService.ExportToJson(data, properties);
+				fileName = $"suppliers_export_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+				contentType = "application/json";
+			}
+
+			// Скачуємо файл
+			await BlazorDownloadFileService.DownloadFileFromText(
+				fileName,
+				fileContent,
+				System.Text.Encoding.UTF8,
+				contentType);
+
+			Snackbar.Add($"Експорт успішно завершено. Файл: {fileName}", MudBlazor.Severity.Success);
+			showExportForm = false;
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка при експорті даних: {ex.Message}", MudBlazor.Severity.Error);
+		}
 	}
 
 	private async Task LoadData()
