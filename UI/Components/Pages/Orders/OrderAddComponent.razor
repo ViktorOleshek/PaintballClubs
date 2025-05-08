@@ -1,0 +1,797 @@
+﻿@using Domain.Entities
+@using Services.ExternalApi.Facade
+@using System.ComponentModel.DataAnnotations
+
+@inject IApiFacade ApiFacade
+@inject ISnackbar Snackbar
+
+<div class="@(showAddForm ? "add-order-container show" : "add-order-container")">
+	@if (showAddForm)
+	{
+		<div class="card shadow">
+			<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+				<h5 class="mb-0">Add New Order</h5>
+				<button type="button" class="btn-close btn-close-white" @onclick="CancelAddOrder"></button>
+			</div>
+			<div class="card-body">
+				<EditForm Model="@newOrder" OnValidSubmit="SaveOrder">
+					<DataAnnotationsValidator />
+					<ValidationSummary />
+
+					<div class="row mb-3">
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Order Number</label>
+								<InputText @bind-Value="newOrder.OrderNumber" class="form-control" readonly />
+								<ValidationMessage For="@(() => newOrder.OrderNumber)" />
+							</div>
+						</div>
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Status</label>
+								<InputSelect @bind-Value="newOrder.StatusId" class="form-select">
+									@foreach (var status in statuses)
+									{
+										<option value="@status.status_id">@status.status_name</option>
+									}
+								</InputSelect>
+							</div>
+						</div>
+					</div>
+
+					<div class="row mb-3">
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Club</label>
+								<InputSelect @bind-Value="selectedClubId" class="form-select" @onchange="ClubChanged">
+									@foreach (var club in clubs)
+									{
+										<option value="@club.club_id">@club.name</option>
+									}
+								</InputSelect>
+							</div>
+						</div>
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Employee</label>
+								<InputSelect @bind-Value="newOrder.EmployeeId" class="form-select">
+									@foreach (var employee in filteredEmployees)
+									{
+										<option value="@employee.employee_id">@employee.first_name @employee.last_name</option>
+									}
+								</InputSelect>
+							</div>
+						</div>
+					</div>
+
+					<div class="row mb-3">
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Club Offer</label>
+								<InputSelect @bind-Value="newOrder.OfferId" class="form-select">
+									@foreach (var offer in offers)
+									{
+										<option value="@offer.offer_id">@offer.name</option>
+									}
+								</InputSelect>
+							</div>
+						</div>
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Client</label>
+								<div class="input-group">
+									<InputSelect @bind-Value="clientSelection" class="form-select">
+										<option value="0">New Client</option>
+										@foreach (var client in clients)
+										{
+											<option value="@client.client_id">@client.first_name @client.last_name</option>
+										}
+									</InputSelect>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					@if (clientSelection == 0)
+					{
+						<div class="card mb-3">
+							<div class="card-header bg-light">
+								<h6 class="mb-0">New Client Information</h6>
+							</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-12 col-md-6 mb-2">
+										<label class="form-label">First Name</label>
+										<InputText @bind-Value="newClient.first_name" class="form-control" />
+										<ValidationMessage For="@(() => newClient.first_name)" />
+									</div>
+									<div class="col-12 col-md-6 mb-2">
+										<label class="form-label">Last Name</label>
+										<InputText @bind-Value="newClient.last_name" class="form-control" />
+										<ValidationMessage For="@(() => newClient.last_name)" />
+									</div>
+									<div class="col-12 col-md-6 mb-2">
+										<label class="form-label">Birth Date</label>
+										<InputDate @bind-Value="newClientBirthDate" class="form-control" />
+									</div>
+									<div class="col-12 col-md-6 mb-2">
+										<label class="form-label">Phone Number</label>
+										<InputText @bind-Value="newClient.phone_number" class="form-control" />
+									</div>
+									<div class="col-12 mb-2">
+										<label class="form-label">Email</label>
+										<InputText @bind-Value="newClient.email" class="form-control" />
+									</div>
+								</div>
+							</div>
+						</div>
+					}
+
+					<div class="row mb-3">
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Order Date</label>
+								<InputDate @bind-Value="newOrder.OrderDate" class="form-control" />
+							</div>
+						</div>
+						<div class="col-12 col-md-6">
+							<div class="form-group">
+								<label class="form-label">Event Date</label>
+								<InputDate @bind-Value="newOrder.EventDate" class="form-control" />
+							</div>
+						</div>
+					</div>
+
+					<!-- Match Details Section -->
+					<div class="card mb-3">
+						<div class="card-header bg-light">
+							<h6 class="mb-0">Match Details</h6>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-12 col-md-6 mb-2">
+									<label class="form-label">Location</label>
+									<InputSelect @bind-Value="newMatch.location_id" class="form-select">
+										<option value="">-- Select Location --</option>
+										@foreach (var location in locations)
+										{
+											<option value="@location.location_id">@location.location_name</option>
+										}
+									</InputSelect>
+								</div>
+								<div class="col-12 col-md-6 mb-2">
+									<label class="form-label">Participants</label>
+									<InputNumber @bind-Value="newMatch.participant_count" class="form-control" />
+								</div>
+								<div class="col-12 mb-2">
+									<label class="form-label">Description</label>
+									<InputTextArea @bind-Value="newMatch.description" class="form-control" rows="2" />
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Equipment Section with integrated add form -->
+					<div class="card mb-3">
+						<div class="card-header bg-light">
+							<h6 class="mb-0">Обладнання</h6>
+						</div>
+						<div class="card-body">
+							<!-- Integrated equipment add form -->
+							<div class="row mb-3 border-bottom pb-3">
+								<div class="col-12 col-md-5 mb-2">
+									<label class="form-label">Доступне обладнання</label>
+									<select class="form-select" @bind="tempEquipmentId">
+										<option value="0">-- Виберіть обладнання --</option>
+										@foreach (var availEquip in FilteredAvailableEquipment())
+										{
+											var equip = equipments.FirstOrDefault(e => e.equipment_id == availEquip.equipment_id);
+											if (equip != null)
+											{
+												<option value="@availEquip.available_id">@equip.name (Ціна: @availEquip.rental_price.ToString("C2"))</option>
+											}
+										}
+									</select>
+									@if (equipmentValidationErrors.ContainsKey("equipment") && tempEquipmentId == 0)
+									{
+										<div class="text-danger">@equipmentValidationErrors["equipment"]</div>
+									}
+								</div>
+								<div class="col-12 col-md-3 mb-2">
+									<label class="form-label">Кількість</label>
+									<input type="number" class="form-control" @bind="tempEquipmentQuantity" min="1" max="@GetMaxForSelectedEquipment()" />
+									@if (equipmentValidationErrors.ContainsKey("quantity") && tempEquipmentQuantity <= 0)
+									{
+										<div class="text-danger">@equipmentValidationErrors["quantity"]</div>
+									}
+								</div>
+								<div class="col-12 col-md-4 mb-2 d-flex align-items-end">
+									<button type="button" class="btn btn-primary w-100" @onclick="ConfirmAddEquipment">
+										<i class="bi bi-plus"></i> Додати обладнання
+									</button>
+								</div>
+							</div>
+
+							@if (selectedEquipment.Count > 0)
+							{
+								<div class="table-responsive mt-3">
+									<table class="table table-sm table-bordered">
+										<thead class="table-light">
+											<tr>
+												<th>Обладнання</th>
+												<th>К-сть</th>
+												<th>Ціна</th>
+												<th>Всього</th>
+												<th></th>
+											</tr>
+										</thead>
+										<tbody>
+											@{
+												decimal equipmentTotal = 0;
+											}
+											@for (int i = 0; i < selectedEquipment.Count; i++)
+											{
+												var item = selectedEquipment[i];
+												var availableEq = availableEquipments.FirstOrDefault(ae => ae.available_id == item.AvailableEquipmentId);
+												var equipment = equipments.FirstOrDefault(e => e.equipment_id == availableEq?.equipment_id);
+												var itemTotal = (availableEq?.rental_price ?? 0) * item.Quantity;
+												equipmentTotal += itemTotal;
+
+												<tr>
+													<td>
+														@equipment?.name
+														<small class="text-muted d-block">Доступно: @(availableEq?.available_quantity ?? 0)</small>
+													</td>
+													<td>
+														<input type="number" class="form-control form-control-sm" value="@item.Quantity" min="1"
+															   max="@(availableEq?.available_quantity ?? 1)"
+															   @onchange="(e => UpdateItemQuantity(i, int.Parse(e.Value.ToString())))" />
+													</td>
+													<td>@((availableEq?.rental_price ?? 0).ToString("0.00"))</td>
+													<td>@itemTotal.ToString("C2")</td>
+													<td>
+														<button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveEquipmentItem(i-1)">
+															<i class="bi bi-trash"></i>
+														</button>
+													</td>
+												</tr>
+											}
+											<tr class="table-light">
+												<td colspan="3" class="text-end fw-bold">Всього за обладнання:</td>
+												<td class="fw-bold">@equipmentTotal.ToString("C2")</td>
+												<td></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							}
+							else
+							{
+								<div class="alert alert-info py-2 mt-3">
+									Обладнання ще не додано. Виберіть обладнання вище, щоб додати його до замовлення.
+								</div>
+							}
+						</div>
+					</div>
+
+					<div class="row mb-3">
+						<div class="col-12">
+							<div class="form-group">
+								<label class="form-label">Загальна сума</label>
+								<div class="input-group">
+									<span class="input-group-text">$</span>
+									<input type="text" class="form-control" value="@CalculateTotalAmount().ToString("F2")" readonly />
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="d-flex justify-content-end mt-3">
+						<button type="button" class="btn btn-secondary me-2" @onclick="CancelAddOrder">Cancel</button>
+						<button type="submit" class="btn btn-success">Save</button>
+					</div>
+				</EditForm>
+			</div>
+		</div>
+	}
+</div>
+
+@code {
+	[Parameter]
+	public bool showAddForm { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> ShowAddFormChanged { get; set; }
+
+	[Parameter]
+	public EventCallback OnOrderAdded { get; set; }
+
+	private OrderViewModel newOrder = new();
+	private Match newMatch = new();
+	private Client newClient = new();
+	private DateTime newClientBirthDate = DateTime.Today.AddYears(-18);
+	private int clientSelection = 0;
+	private int selectedClubId = 0;
+	private int tempEquipmentId = 0;
+	private int tempEquipmentQuantity = 1;
+	private Dictionary<string, string> equipmentValidationErrors = new();
+	private string validationErrorMessage = "";
+	private List<OrderStatus> statuses = new();
+	private List<Employee> employees = new();
+	private List<Club> clubs = new();
+	private List<ClubOffer> offers = new();
+	private List<Location> locations = new();
+	private List<Client> clients = new();
+	private List<AvailableEquipment> availableEquipments = new();
+	private List<Equipment> equipments = new();
+	private List<EquipmentItem> selectedEquipment = new();
+	private List<Employee> filteredEmployees = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadData();
+		InitializeNewOrder();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (showAddForm && selectedClubId == 0 && clubs.Any())
+		{
+			selectedClubId = clubs.First().club_id;
+			await ClubChanged();
+		}
+	}
+
+	private void InitializeNewOrder()
+	{
+		string orderNumber = $"OR-{Guid.NewGuid():N}";
+
+		newOrder = new OrderViewModel
+			{
+				OrderNumber = orderNumber,
+				OrderDate = DateTime.Now,
+				EventDate = DateTime.Now.AddDays(7),
+				StatusId = statuses.FirstOrDefault()?.status_id ?? 0
+			};
+
+		newMatch = new Match
+			{
+				event_date = newOrder.EventDate,
+				participant_count = 0
+			};
+
+		newClient = new Client
+			{
+				first_name = "",
+				last_name = "",
+				phone_number = "",
+				email = ""
+			};
+
+		selectedEquipment.Clear();
+		clientSelection = 0;
+		tempEquipmentId = 0;
+		tempEquipmentQuantity = 1;
+		equipmentValidationErrors.Clear();
+	}
+
+	private async Task LoadData()
+	{
+		var statusesResponse = await ApiFacade.OrderStatusApiService.Get();
+		var employeesResponse = await ApiFacade.EmployeeApiService.Get();
+		var clubsResponse = await ApiFacade.ClubApiService.Get();
+		var offersResponse = await ApiFacade.ClubOffersApiService.Get();
+		var locationsResponse = await ApiFacade.LocationApiService.Get();
+		var clientsResponse = await ApiFacade.ClientApiService.Get();
+		var availableEquipmentResponse = await ApiFacade.AvailableEquipmentApiService.Get();
+		var equipmentResponse = await ApiFacade.EquipmentApiService.Get();
+
+		statuses = statusesResponse.Content.ToList();
+		employees = employeesResponse.Content.ToList();
+		clubs = clubsResponse.Content.ToList();
+		offers = offersResponse.Content.ToList();
+		locations = locationsResponse.Content.ToList();
+		clients = clientsResponse.Content.ToList();
+		availableEquipments = availableEquipmentResponse.Content.ToList();
+		equipments = equipmentResponse.Content.ToList();
+
+		if (selectedClubId == 0 && clubs.Any())
+		{
+			selectedClubId = clubs.First().club_id;
+			await ClubChanged();
+		}
+	}
+
+	private async Task ClubChanged()
+	{
+		filteredEmployees = employees.Where(e => e.club_id == selectedClubId).ToList();
+
+		if (filteredEmployees.Any())
+		{
+			newOrder.EmployeeId = filteredEmployees.First().employee_id;
+		}
+
+		// Check if we have equipment selected that's not available in the new club
+		for (int i = selectedEquipment.Count - 1; i >= 0; i--)
+		{
+			var item = selectedEquipment[i];
+			var availEq = availableEquipments.FirstOrDefault(ae => ae.available_id == item.AvailableEquipmentId);
+
+			if (availEq == null || availEq.club_id != selectedClubId)
+			{
+				selectedEquipment.RemoveAt(i);
+			}
+		}
+
+		// Reset equipment selection
+		tempEquipmentId = 0;
+		tempEquipmentQuantity = 1;
+
+		await InvokeAsync(StateHasChanged);
+	}
+
+	private async Task CancelAddOrder()
+	{
+		showAddForm = false;
+		await ShowAddFormChanged.InvokeAsync(showAddForm);
+		InitializeNewOrder();
+	}
+
+	private async Task SaveOrder()
+	{
+		// Об'єднуємо всі перевірки в один блок
+		if ((clientSelection == 0 && (string.IsNullOrWhiteSpace(newClient.first_name) || string.IsNullOrWhiteSpace(newClient.last_name) ||
+			string.IsNullOrWhiteSpace(newClient.phone_number) || string.IsNullOrWhiteSpace(newClient.email))) ||
+			(newMatch.location_id == 0 || string.IsNullOrEmpty(newMatch.location_id?.ToString())) ||
+			newMatch.participant_count <= 0 ||
+			string.IsNullOrWhiteSpace(newOrder.OrderNumber) ||
+			newOrder.StatusId == 0 ||
+			newOrder.EmployeeId == 0 ||
+			newOrder.OfferId == 0)
+		{
+			Snackbar.Add("Необхідно заповнити всі обов'язкові поля форми", Severity.Warning);
+			return;
+		}
+
+		try
+		{
+			// 1. Create client if needed
+			int? clientId = null;
+			if (clientSelection == 0)
+			{
+				// Converting DateOnly to DateTime for the API
+				newClient.birth_date = DateOnly.FromDateTime(newClientBirthDate);
+				newClient.CreateDatetime = DateTime.Now;
+
+				var clientResponse = await ApiFacade.ClientApiService.Create(newClient);
+				if (clientResponse.IsSuccessStatusCode && clientResponse.Content != null)
+				{
+					clientId = clientResponse.Content.client_id;
+				}
+				else
+				{
+					Snackbar.Add("Не вдалося створити запис клієнта", Severity.Error);
+					return;
+				}
+			}
+			else if (clientSelection > 0)
+			{
+				clientId = clientSelection;
+			}
+
+			// 2. Create the order
+			var offer = offers.FirstOrDefault(o => o.offer_id == newOrder.OfferId);
+			decimal totalAmount = CalculateTotalAmount();
+
+			var order = new Order
+				{
+					order_number = newOrder.OrderNumber,
+					total_amount = totalAmount,
+					event_date = newOrder.EventDate,
+					order_time = newOrder.OrderDate,
+					client_id = clientId,
+					employee_id = newOrder.EmployeeId,
+					offer_id = newOrder.OfferId,
+					status_id = newOrder.StatusId,
+					CreateDatetime = DateTime.Now
+				};
+
+			var orderResponse = await ApiFacade.OrdersApiService.Create(order);
+			if (!orderResponse.IsSuccessStatusCode || orderResponse.Content == null)
+			{
+				Snackbar.Add("Не вдалося створити замовлення", Severity.Error);
+				return;
+			}
+
+			int orderId = orderResponse.Content.order_id;
+
+			// 3. Create match
+			newMatch.order_id = orderId;
+			newMatch.event_date = newOrder.EventDate;
+			newMatch.CreateDatetime = DateTime.Now;
+
+			var matchResponse = await ApiFacade.MatchApiService.Create(newMatch);
+			if (!matchResponse.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Не вдалося створити деталі матчу", Severity.Warning);
+				// Continue anyway
+			}
+
+			// 4. Create order details for equipment
+			bool allEquipmentAdded = true;
+			foreach (var item in selectedEquipment)
+			{
+				var orderDetail = new OrderDetail
+					{
+						order_id = orderId,
+						available_equipment_id = item.AvailableEquipmentId,
+						quantity = item.Quantity,
+						CreateDatetime = DateTime.Now
+					};
+
+				var detailResponse = await ApiFacade.OrderDetailsApiService.Create(orderDetail);
+				if (!detailResponse.IsSuccessStatusCode)
+				{
+					allEquipmentAdded = false;
+				}
+			}
+
+			if (!allEquipmentAdded)
+			{
+				Snackbar.Add("Деякі позиції обладнання не вдалося додати", Severity.Warning);
+			}
+
+			// 5. Reset form and notify parent
+			Snackbar.Add("Замовлення успішно створено", Severity.Success);
+			InitializeNewOrder();
+			showAddForm = false;
+			await ShowAddFormChanged.InvokeAsync(showAddForm);
+			await OnOrderAdded.InvokeAsync();
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Помилка при створенні замовлення: {ex.Message}", Severity.Error);
+		}
+	}
+
+	private decimal CalculateTotalAmount()
+	{
+		decimal total = 0;
+
+		// Add offer price
+		var offer = offers.FirstOrDefault(o => o.offer_id == newOrder.OfferId);
+		if (offer != null)
+		{
+			total += offer.price;
+		}
+
+		// Add equipment prices
+		foreach (var item in selectedEquipment)
+		{
+			var availableEquipment = availableEquipments.FirstOrDefault(ae => ae.available_id == item.AvailableEquipmentId);
+			if (availableEquipment != null)
+			{
+				total += availableEquipment.rental_price * item.Quantity;
+			}
+		}
+
+		return total;
+	}
+
+	private void ConfirmAddEquipment()
+	{
+		equipmentValidationErrors.Clear();
+		bool hasErrors = false;
+
+		if (tempEquipmentId <= 0)
+		{
+			equipmentValidationErrors["equipment"] = "Необхідно вибрати обладнання";
+			hasErrors = true;
+		}
+
+		if (tempEquipmentQuantity <= 0)
+		{
+			equipmentValidationErrors["quantity"] = "Кількість повинна бути більше 0";
+			hasErrors = true;
+		}
+
+		if (hasErrors)
+		{
+			return;
+		}
+
+		var availEq = availableEquipments.FirstOrDefault(ae => ae.available_id == tempEquipmentId);
+		if (availEq == null)
+		{
+			Snackbar.Add("Вибране обладнання недоступне", Severity.Error);
+			return;
+		}
+
+		// Calculate remaining quantity after accounting for existing selections
+		int remainingQuantity = availEq.available_quantity;
+		foreach (var existing in selectedEquipment.Where(e => e.AvailableEquipmentId == tempEquipmentId))
+		{
+			remainingQuantity -= existing.Quantity;
+		}
+
+		// Check if we have enough remaining quantity
+		if (tempEquipmentQuantity > remainingQuantity)
+		{
+			if (remainingQuantity <= 0)
+			{
+				Snackbar.Add("Більше немає доступних одиниць цього обладнання", Severity.Warning);
+				return;
+			}
+			tempEquipmentQuantity = remainingQuantity;
+			Snackbar.Add($"Кількість скоригована до максимально доступної: {remainingQuantity}", Severity.Warning);
+		}
+
+		// Find if this equipment is already in the list
+		var existingItem = selectedEquipment.FirstOrDefault(e => e.AvailableEquipmentId == tempEquipmentId);
+
+		if (existingItem != null)
+		{
+			// Update existing item quantity
+			existingItem.Quantity += tempEquipmentQuantity;
+		}
+		else
+		{
+			// Add as new item
+			selectedEquipment.Add(new EquipmentItem
+				{
+					AvailableEquipmentId = tempEquipmentId,
+					Quantity = tempEquipmentQuantity
+				});
+		}
+
+		// Reset input fields
+		tempEquipmentId = 0;
+		tempEquipmentQuantity = 1;
+
+		// Force UI update and recalculate total
+		InvokeAsync(StateHasChanged);
+	}
+
+	private void RemoveEquipmentItem(int index)
+	{
+		if (index >= 0 && index < selectedEquipment.Count)
+		{
+			selectedEquipment.RemoveAt(index);
+
+			// Force recalculation of totals
+			InvokeAsync(StateHasChanged);
+		}
+	}
+
+	private void UpdateItemQuantity(int index, int quantity)
+	{
+		if (index >= 0 && index < selectedEquipment.Count)
+		{
+			var item = selectedEquipment[index];
+			var availEq = availableEquipments.FirstOrDefault(ae => ae.available_id == item.AvailableEquipmentId);
+
+			// Validation of quantity
+			if (availEq != null)
+			{
+				int maxAllowed = availEq.available_quantity;
+
+				// Check for other instances of the same equipment in the list
+				if (selectedEquipment.Count > 1)
+				{
+					for (int i = 0; i < selectedEquipment.Count; i++)
+					{
+						if (i != index && selectedEquipment[i].AvailableEquipmentId == item.AvailableEquipmentId)
+						{
+							maxAllowed -= selectedEquipment[i].Quantity;
+						}
+					}
+				}
+
+				if (quantity > maxAllowed)
+				{
+					selectedEquipment[index].Quantity = maxAllowed;
+					Snackbar.Add($"Кількість скоригована до максимально доступної: {maxAllowed}", Severity.Warning);
+				}
+				else if (quantity < 1)
+				{
+					selectedEquipment[index].Quantity = 1;
+				}
+				else
+				{
+					selectedEquipment[index].Quantity = quantity;
+				}
+			}
+			else
+			{
+				// Fallback if equipment not found
+				if (quantity < 1)
+					selectedEquipment[index].Quantity = 1;
+				else
+					selectedEquipment[index].Quantity = quantity;
+			}
+
+			// Force UI update and recalculate total
+			StateHasChanged();
+		}
+	}
+	private IEnumerable<AvailableEquipment> FilteredAvailableEquipment()
+	{
+		var filteredList = new List<AvailableEquipment>();
+
+		foreach (var equipment in availableEquipments.Where(ae => ae.club_id == selectedClubId))
+		{
+			// Calculate remaining quantity after selections
+			int remainingQty = equipment.available_quantity;
+			foreach (var item in selectedEquipment.Where(e => e.AvailableEquipmentId == equipment.available_id))
+			{
+				remainingQty -= item.Quantity;
+			}
+
+			// Only show equipment with available quantity
+			if (remainingQty > 0)
+			{
+				filteredList.Add(equipment);
+			}
+		}
+
+		return filteredList;
+	}
+
+	private int GetMaxForSelectedEquipment()
+	{
+		if (tempEquipmentId == 0) return 1;
+
+		var available = availableEquipments.FirstOrDefault(ae => ae.available_id == tempEquipmentId);
+		if (available == null) return 1;
+
+		// Calculate total already selected quantity of this equipment
+		int alreadySelected = selectedEquipment
+			.Where(e => e.AvailableEquipmentId == tempEquipmentId)
+			.Sum(e => e.Quantity);
+
+		int remaining = available.available_quantity - alreadySelected;
+		return Math.Max(1, remaining);
+	}
+
+	// Helper classes
+	public class OrderViewModel
+	{
+		[Required(ErrorMessage = "Номер замовлення обов'язковий")]
+		[StringLength(50, ErrorMessage = "Номер замовлення не може перевищувати 50 символів")]
+		public string OrderNumber { get; set; } = "";
+
+		[Required(ErrorMessage = "Дата замовлення обов'язкова")]
+		public DateTime OrderDate { get; set; }
+
+		[Required(ErrorMessage = "Дата події обов'язкова")]
+		public DateTime EventDate { get; set; }
+
+		[Required(ErrorMessage = "Статус обов'язковий")]
+		public int StatusId { get; set; }
+
+		[Required(ErrorMessage = "Вибір працівника обов'язковий")]
+		public int EmployeeId { get; set; }
+
+		[Required(ErrorMessage = "Пропозиція клубу обов'язкова")]
+		public int OfferId { get; set; }
+	}
+
+	public class EquipmentItem
+	{
+		public int AvailableEquipmentId { get; set; }
+		public int Quantity { get; set; }
+	}
+}
+
+<style>
+	.add-order-container {
+		display: none;
+		position: relative;
+		z-index: 10;
+		margin-bottom: 20px;
+	}
+
+		.add-order-container.show {
+			display: block;
+		}
+</style>

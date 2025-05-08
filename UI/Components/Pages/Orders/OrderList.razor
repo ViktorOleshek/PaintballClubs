@@ -15,11 +15,13 @@
 	<div class="row mb-3">
 		<div class="col-12 d-flex justify-content-between align-items-center">
 			<h4>Orders</h4>
-			<button class="btn btn-primary" @onclick="CreateNewOrder">
+			<button class="btn btn-primary" @onclick="OpenAddOrderForm">
 				<i class="bi bi-plus-lg me-1"></i> NEW ORDER
 			</button>
 		</div>
 	</div>
+
+	<OrderAddComponent @bind-showAddForm="showAddForm" OnOrderAdded="LoadData" />
 
 	<div class="row mb-3">
 		<div class="col-12 col-md-6 col-lg-4">
@@ -461,16 +463,15 @@
 	{
 		await LoadData();
 	}
-
-	// 1. First, add these private fields to the @code section
+		// 1. First, add these private fields to the @code section
 	private bool showExportForm = false;
 	private string exportFormat = "json";
 	private ExportOrdersModel exportModel = new ExportOrdersModel();
 	private string exportStatus = "";
-
 	// 2. Add this method to handle the export functionality
 	private async Task ExportOrders()
 	{
+
 		if (!FilteredOrders.Any())
 		{
 			await ShowToast("No orders to export", "warning");
@@ -646,6 +647,14 @@
 
 		await ShowToast("Export completed successfully", "success");
 		showExportForm = false;
+	}
+
+	private bool showAddForm = false;
+
+	// Add button method
+	private void OpenAddOrderForm()
+	{
+		showAddForm = true;
 	}
 
 	private HashSet<int> expandedOrderDetails = new HashSet<int>();
@@ -923,11 +932,6 @@
 				await ShowToast("Failed to delete order", "danger");
 			}
 		}
-	}
-
-	private void CreateNewOrder()
-	{
-		NavigationManager.NavigateTo("/orders/create");
 	}
 
 	// Order editing methods
