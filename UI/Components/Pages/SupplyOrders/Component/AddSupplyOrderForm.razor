@@ -1,0 +1,341 @@
+﻿// Path: D:\lpnu\6 sem\DB(K)\CursWork.Blazor\UI\Components\Pages\SupplyOrders\Component\AddSupplyOrderForm.razor
+@using Domain.Entities
+@using Services.ExternalApi.Facade
+@using System.ComponentModel.DataAnnotations
+
+@inject IApiFacade ApiFacade
+@inject ISnackbar Snackbar
+
+<div class="mt-3 mb-4">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="@(() => showAddForm = !showAddForm)"
+               StartIcon="@(showAddForm ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)">
+        @(showAddForm ? "Скасувати" : "Нове замовлення")
+    </MudButton>
+</div>
+
+@if (showAddForm)
+{
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="newOrder.SupplyOrderNumber"
+                                  Label="Номер замовлення"
+                                  Variant="Variant.Outlined"
+                                  Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudDatePicker @bind-Date="newOrder.OrderDate"
+                                   Label="Дата замовлення"
+                                   Variant="Variant.Outlined"
+                                   Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect @bind-Value="newOrder.SupplierId"
+                               Label="Постачальник"
+                               Variant="Variant.Outlined"
+                               Required="true">
+                        @foreach (var supplier in Suppliers)
+                        {
+                            <MudSelectItem Value="@supplier.supplier_id">@supplier.name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect @bind-Value="selectedClubId"
+                               Label="Клуб"
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               HelperText="Оберіть клуб для фільтрації працівників"
+                               OnValueChanged="@FilterEmployeesByClub">
+                        <MudSelectItem Value="0">Всі клуби</MudSelectItem>
+                        @foreach (var club in Clubs)
+                        {
+                            <MudSelectItem Value="@club.club_id">@club.name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect @bind-Value="newOrder.EmployeeId"
+                               Label="Відповідальний працівник"
+                               Variant="Variant.Outlined"
+                               Required="true">
+                        @foreach (var employee in FilteredEmployees)
+                        {
+                            <MudSelectItem Value="@employee.employee_id">@employee.first_name @employee.last_name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect @bind-Value="newOrder.StatusId"
+                               Label="Статус замовлення"
+                               Variant="Variant.Outlined"
+                               Required="true">
+                        @foreach (var status in Statuses)
+                        {
+                            <MudSelectItem Value="@status.status_id">@status.status_name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="8">
+                    <MudTextField @bind-Value="newOrder.TotalAmount"
+                                  Label="Загальна сума"
+                                  Variant="Variant.Outlined"
+                                  Type="InputType.Number"
+                                  Required="true" />
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.h6" Class="mb-2">Обладнання у замовленні</MudText>
+
+            @foreach (var item in newOrder.SuppliedEquipmentItems)
+            {
+                <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border: 1px solid #e0e0e0; border-radius: 4px;">
+                    <MudGrid>
+                        <MudItem xs="12" md="5">
+                            <MudSelect @bind-Value="item.EquipmentId"
+                                       Label="Обладнання"
+                                       Variant="Variant.Outlined"
+                                       Required="true">
+                                @foreach (var equipment in Equipments)
+                                {
+                                    <MudSelectItem Value="@equipment.equipment_id">
+                                        @equipment.name (@GetBrandName(equipment.brand_id))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudTextField @bind-Value="item.Quantity"
+                                          Label="Кількість"
+                                          Variant="Variant.Outlined"
+                                          Type="InputType.Number"
+                                          Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudTextField @bind-Value="item.Price"
+                                          Label="Ціна"
+                                          Variant="Variant.Outlined"
+                                          Type="InputType.Number"
+                                          Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="1" Class="d-flex align-center justify-center">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => RemoveEquipmentItem(item))" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+
+            <MudButton Class="mt-2"
+                       Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddEquipmentItem">
+                Додати обладнання
+            </MudButton>
+        </MudCardContent>
+
+        <MudCardActions>
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Secondary"
+                       OnClick="@(() => showAddForm = false)">
+                Скасувати
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="SaveOrder"
+                       Disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <span class="ms-2">Збереження...</span>
+                }
+                else
+                {
+                    <span>Зберегти замовлення</span>
+                }
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+}
+
+@code {
+    [Parameter]
+    public List<SupplyOrderStatus> Statuses { get; set; } = new();
+
+    [Parameter]
+    public List<Supplier> Suppliers { get; set; } = new();
+
+    [Parameter]
+    public List<Employee> Employees { get; set; } = new();
+
+    [Parameter]
+    public List<Equipment> Equipments { get; set; } = new();
+
+    [Parameter]
+    public List<Brand> Brands { get; set; } = new();
+
+    [Parameter]
+    public List<Club> Clubs { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnOrderCreated { get; set; }
+
+    private bool showAddForm = false;
+    private bool isSaving = false;
+    private int selectedClubId = 0;
+
+    private SupplyOrderViewModel newOrder = new()
+        {
+            OrderDate = DateTime.Today,
+            StatusId = 1, // Default to "Pending" status
+            TotalAmount = 0
+        };
+
+    private IEnumerable<Employee> FilteredEmployees => selectedClubId == 0
+        ? Employees
+        : Employees.Where(e => e.club_id == selectedClubId);
+
+    private void FilterEmployeesByClub(int clubId)
+    {
+        selectedClubId = clubId;
+        // If there's only one employee after filtering, auto-select it
+        if (FilteredEmployees.Count() == 1)
+        {
+            newOrder.EmployeeId = FilteredEmployees.First().employee_id;
+        }
+    }
+
+    private string GetBrandName(int brandId)
+    {
+        return Brands.FirstOrDefault(b => b.brand_id == brandId)?.brand_name ?? "Невідомо";
+    }
+
+    private void AddEquipmentItem()
+    {
+        newOrder.SuppliedEquipmentItems.Add(new SuppliedEquipmentViewModel
+            {
+                EquipmentId = Equipments.Any() ? Equipments.First().equipment_id : 0,
+                Quantity = 1,
+                Price = 0
+            });
+    }
+
+    private void RemoveEquipmentItem(SuppliedEquipmentViewModel item)
+    {
+        newOrder.SuppliedEquipmentItems.Remove(item);
+    }
+
+    private async Task SaveOrder()
+    {
+        if (newOrder.SuppliedEquipmentItems.Count == 0)
+        {
+            Snackbar.Add("Додайте хоча б один товар до замовлення", MudBlazor.Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newOrder.SupplyOrderNumber))
+        {
+            Snackbar.Add("Введіть номер замовлення", MudBlazor.Severity.Warning);
+            return;
+        }
+
+        if (newOrder.SupplierId == 0)
+        {
+            Snackbar.Add("Оберіть постачальника", MudBlazor.Severity.Warning);
+            return;
+        }
+
+        if (newOrder.EmployeeId == 0)
+        {
+            Snackbar.Add("Оберіть відповідального працівника", MudBlazor.Severity.Warning);
+            return;
+        }
+
+        // Calculate total amount from items if not specified
+        if (newOrder.TotalAmount == 0)
+        {
+            newOrder.TotalAmount = newOrder.SuppliedEquipmentItems.Sum(i => i.Price * i.Quantity);
+        }
+
+        isSaving = true;
+
+        try
+        {
+            // Create the supply order
+            var supplyOrder = new SupplyOrder
+                {
+                    supply_order_number = newOrder.SupplyOrderNumber,
+                    order_date = newOrder.OrderDate,
+                    supplier_id = newOrder.SupplierId,
+                    employee_id = newOrder.EmployeeId,
+                    status_id = newOrder.StatusId,
+                    total_amount = newOrder.TotalAmount,
+                    CreateDatetime = DateTime.Now,
+                    UpdateDatetime = DateTime.Now
+                };
+
+            var response = await ApiFacade.SupplyOrdersApiService.Create(supplyOrder);
+
+            if (!response.IsSuccessStatusCode || response.Content == null)
+            {
+                Snackbar.Add("Помилка при створенні замовлення", MudBlazor.Severity.Error);
+                isSaving = false;
+                return;
+            }
+
+            int orderId = response.Content.supply_order_id;
+
+            // Add equipment items
+            foreach (var item in newOrder.SuppliedEquipmentItems)
+            {
+                var suppliedEquipment = new SuppliedEquipment
+                    {
+                        supply_order_id = orderId,
+                        equipment_id = item.EquipmentId,
+                        quantity = item.Quantity,
+                        price = item.Price,
+                        CreateDatetime = DateTime.Now,
+                        UpdateDatetime = DateTime.Now
+                    };
+
+                var itemResponse = await ApiFacade.SuppliedEquipmentApiService.Create(suppliedEquipment);
+
+                if (!itemResponse.IsSuccessStatusCode)
+                {
+                    Snackbar.Add($"Помилка при додаванні обладнання до замовлення", MudBlazor.Severity.Warning);
+                }
+            }
+
+            Snackbar.Add("Замовлення успішно створено", MudBlazor.Severity.Success);
+
+            // Reset form
+            newOrder = new()
+                {
+                    OrderDate = DateTime.Today,
+                    StatusId = 1,
+                    TotalAmount = 0
+                };
+
+            showAddForm = false;
+
+            // Notify parent component to refresh data
+            await OnOrderCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Помилка при створенні замовлення: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
