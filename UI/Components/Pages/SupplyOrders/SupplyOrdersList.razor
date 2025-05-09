@@ -38,6 +38,18 @@
 						  Suppliers="@suppliers"
 						  Employees="@employees" />
 
+		<AuthorizeView Policy=@Roles.OfficeManager>
+			<Authorized Context="addSupplyOrderContext">
+				<AddSupplyOrderForm Statuses="@statuses"
+									Suppliers="@suppliers"
+									Employees="@employees"
+									Equipments="@equipmentList"
+									Brands="@brands"
+									Clubs="@clubs"
+									OnOrderCreated="LoadData" />
+			</Authorized>
+		</AuthorizeView>
+
 		<button class="btn btn-primary mt-3" @onclick="ToggleExportForm">
 			<i class="bi bi-download me-1"></i> Експортувати дані
 		</button>
@@ -185,76 +197,76 @@
 
 								<AuthorizeView Policy=@Roles.OfficeManager>
 									<Authorized Context="officeManagerAccess">
-								<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, OrderDateField)">
-									@if (editingOrderId == order.SupplyOrderId && editingField == OrderDateField)
-									{
-										<input type="date" class="form-control form-select-sm"
-											   value="@order.OrderDate.ToString("yyyy-MM-dd")"
-											   @onchange="(e) => UpdateOrderField(order, OrderDateField, e.Value)"
-											   @onblur="() => StopEditing()"
-											   @onclick:stopPropagation="true"
-											   @onkeydown="(e) => HandleKeyDown(e, order, OrderDateField)" />
-									}
-									else
-									{
-										<span>@order.OrderDate.ToShortDateString()</span>
-									}
-								</td>
-								<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, SupplierField)">
-									@if (editingOrderId == order.SupplyOrderId && editingField == SupplierField)
-									{
-										<select class="form-select form-select-sm" value="@order.SupplierId"
-												@onchange="(e) => UpdateOrderField(order, SupplierField, e.Value)"
-												@onblur="() => StopEditing()"
-												@onclick:stopPropagation="true">
-											@foreach (var supplier in suppliers)
+										<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, OrderDateField)">
+											@if (editingOrderId == order.SupplyOrderId && editingField == OrderDateField)
 											{
-												<option value="@supplier.supplier_id">@supplier.name</option>
+												<input type="date" class="form-control form-select-sm"
+													   value="@order.OrderDate.ToString("yyyy-MM-dd")"
+													   @onchange="(e) => UpdateOrderField(order, OrderDateField, e.Value)"
+													   @onblur="() => StopEditing()"
+													   @onclick:stopPropagation="true"
+													   @onkeydown="(e) => HandleKeyDown(e, order, OrderDateField)" />
 											}
-										</select>
-									}
-									else
-									{
-										<span>@order.SupplierName</span>
-									}
-								</td>
-								<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, StatusField)">
-									@if (editingOrderId == order.SupplyOrderId && editingField == StatusField)
-									{
-										<select class="form-select form-select-sm" value="@order.StatusId"
-												@onchange="(e) => UpdateOrderField(order, StatusField, e.Value)"
-												@onblur="() => StopEditing()"
-												@onclick:stopPropagation="true">
-											@foreach (var status in statuses)
+											else
 											{
-												<option value="@status.status_id">@status.status_name</option>
+												<span>@order.OrderDate.ToShortDateString()</span>
 											}
-										</select>
-									}
-									else
-									{
-										<span class="@GetStatusBadgeClass(order.StatusName)">@order.StatusName</span>
-									}
-								</td>
-								<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, EmployeeField)">
-									@if (editingOrderId == order.SupplyOrderId && editingField == EmployeeField)
-									{
-										<select class="form-select form-select-sm" value="@order.EmployeeId"
-												@onchange="(e) => UpdateOrderField(order, EmployeeField, e.Value)"
-												@onblur="() => StopEditing()"
-												@onclick:stopPropagation="true">
-											@foreach (var employee in employees)
+										</td>
+										<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, SupplierField)">
+											@if (editingOrderId == order.SupplyOrderId && editingField == SupplierField)
 											{
-												<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
+												<select class="form-select form-select-sm" value="@order.SupplierId"
+														@onchange="(e) => UpdateOrderField(order, SupplierField, e.Value)"
+														@onblur="() => StopEditing()"
+														@onclick:stopPropagation="true">
+													@foreach (var supplier in suppliers)
+													{
+														<option value="@supplier.supplier_id">@supplier.name</option>
+													}
+												</select>
 											}
-										</select>
-									}
-									else
-									{
-										<span>@order.EmployeeName</span>
-									}
-								</td>
-																	</Authorized>
+											else
+											{
+												<span>@order.SupplierName</span>
+											}
+										</td>
+										<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, StatusField)">
+											@if (editingOrderId == order.SupplyOrderId && editingField == StatusField)
+											{
+												<select class="form-select form-select-sm" value="@order.StatusId"
+														@onchange="(e) => UpdateOrderField(order, StatusField, e.Value)"
+														@onblur="() => StopEditing()"
+														@onclick:stopPropagation="true">
+													@foreach (var status in statuses)
+													{
+														<option value="@status.status_id">@status.status_name</option>
+													}
+												</select>
+											}
+											else
+											{
+												<span class="@GetStatusBadgeClass(order.StatusName)">@order.StatusName</span>
+											}
+										</td>
+										<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, EmployeeField)">
+											@if (editingOrderId == order.SupplyOrderId && editingField == EmployeeField)
+											{
+												<select class="form-select form-select-sm" value="@order.EmployeeId"
+														@onchange="(e) => UpdateOrderField(order, EmployeeField, e.Value)"
+														@onblur="() => StopEditing()"
+														@onclick:stopPropagation="true">
+													@foreach (var employee in employees)
+													{
+														<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
+													}
+												</select>
+											}
+											else
+											{
+												<span>@order.EmployeeName</span>
+											}
+										</td>
+									</Authorized>
 								</AuthorizeView>
 
 								<AuthorizeView Policy=@Roles.WarehouseWorker>
@@ -280,7 +292,7 @@
 										<button class="btn btn-sm btn-primary me-1" @onclick="() => ToggleOrderDetails(order)">
 											<i class="bi bi-info-lg"></i>
 										</button>
-										<AuthorizeView Policy=@Roles.WarehouseWorker>
+										<AuthorizeView Policy=@Roles.OfficeManager>
 											<Authorized Context="deleteSupplyOrder">
 												<button class="btn btn-sm btn-danger" @onclick="(e) => DeleteOrder(order.SupplyOrderId, e)">
 													<i class="bi bi-trash"></i>
