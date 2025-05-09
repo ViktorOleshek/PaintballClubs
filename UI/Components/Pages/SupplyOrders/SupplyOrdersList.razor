@@ -69,7 +69,11 @@
 							<select class="form-select" @bind="exportDetailLevel">
 								<option value="basic">Основна інформація</option>
 								<option value="detailed">З деталями обладнання</option>
-								<option value="full">Повні деталі з розміщенням</option>
+								<AuthorizeView Policy=@Roles.WarehouseWorker>
+									<Authorized Context="exportWithDetail">
+										<option value="full">Повні деталі з розміщенням</option>
+									</Authorized>
+								</AuthorizeView>
 							</select>
 						</div>
 					</div>
@@ -175,14 +179,17 @@
 						@foreach (var order in PaginatedOrders)
 						{
 							<tr class="@GetStatusRowClass(order.StatusName)">
-								<td class="text-end cell-editable">
+								<td class="cell-editable">
 									<span>@order.SupplyOrderNumber</span>
 								</td>
+
+								<AuthorizeView Policy=@Roles.OfficeManager>
+									<Authorized Context="officeManagerAccess">
 								<td class="cell-editable" @onclick="() => StartEditing(order.SupplyOrderId, OrderDateField)">
 									@if (editingOrderId == order.SupplyOrderId && editingField == OrderDateField)
 									{
 										<input type="date" class="form-control form-select-sm"
-											   value="@order.OrderDate.ToString("yyyy-MM-dd")" ;
+											   value="@order.OrderDate.ToString("yyyy-MM-dd")"
 											   @onchange="(e) => UpdateOrderField(order, OrderDateField, e.Value)"
 											   @onblur="() => StopEditing()"
 											   @onclick:stopPropagation="true"
@@ -247,16 +254,39 @@
 										<span>@order.EmployeeName</span>
 									}
 								</td>
+																	</Authorized>
+								</AuthorizeView>
+
+								<AuthorizeView Policy=@Roles.WarehouseWorker>
+									<Authorized Context="warehouserWorkerReadOnly">
+										<td>
+											<span>@order.OrderDate.ToShortDateString()</span>
+										</td>
+										<td>
+											<span>@order.SupplierName</span>
+										</td>
+										<td>
+											<span class="@GetStatusBadgeClass(order.StatusName)">@order.StatusName</span>
+										</td>
+										<td>
+											<span>@order.EmployeeName</span>
+										</td>
+									</Authorized>
+								</AuthorizeView>
 								<td>@order.SuppliedEquipmentItems.Count одиниць</td>
 								<td class="text-end">@order.TotalAmount.ToString("C2")</td>
 								<td>
 									<div class="d-flex justify-content-around">
 										<button class="btn btn-sm btn-primary me-1" @onclick="() => ToggleOrderDetails(order)">
-											<i class="bi bi-pencil"></i>
+											<i class="bi bi-info-lg"></i>
 										</button>
-										<button class="btn btn-sm btn-danger" @onclick="(e) => DeleteOrder(order.SupplyOrderId, e)">
-											<i class="bi bi-trash"></i>
-										</button>
+										<AuthorizeView Policy=@Roles.WarehouseWorker>
+											<Authorized Context="deleteSupplyOrder">
+												<button class="btn btn-sm btn-danger" @onclick="(e) => DeleteOrder(order.SupplyOrderId, e)">
+													<i class="bi bi-trash"></i>
+												</button>
+											</Authorized>
+										</AuthorizeView>
 									</div>
 								</td>
 							</tr>

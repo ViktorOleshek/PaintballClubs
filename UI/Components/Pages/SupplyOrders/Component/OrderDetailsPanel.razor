@@ -1,5 +1,6 @@
 ﻿@using Domain.Constants
 @using Domain.Entities
+@using Microsoft.AspNetCore.Components.Authorization
 @using static UI.Components.Pages.SupplyOrders.SupplyOrdersList
 @inject Services.ExternalApi.Facade.IApiFacade ApiFacade
 @inject MudBlazor.ISnackbar Snackbar
@@ -26,13 +27,26 @@
 							<div class="row g-1">
 								<div class="col-md-12 mb-1">
 									<label class="form-label-sm mb-0">Постачальник</label>
-									<InputSelect class="form-select form-select-sm" @bind-Value="Order.SupplierId">
-										@foreach (var supplier in Suppliers)
-										{
-											<option value="@supplier.supplier_id">@supplier.name</option>
-										}
-									</InputSelect>
-									<ValidationMessage For="@(() => Order.SupplierId)" />
+
+									<AuthorizeView Policy=@Roles.OfficeManager>
+										<Authorized Context="supplierChangeCan">
+											<InputSelect class="form-select form-select-sm" @bind-Value="Order.SupplierId">
+												@foreach (var supplier in Suppliers)
+												{
+													<option value="@supplier.supplier_id">@supplier.name</option>
+												}
+											</InputSelect>
+
+											<ValidationMessage For="@(() => Order.SupplierId)" />
+										</Authorized>
+									</AuthorizeView>
+
+									<AuthorizeView Policy=@Roles.WarehouseWorker>
+										<Authorized Context="supplierChangeforbid">
+											<span>@selectedSupplier?.name</span>
+										</Authorized>
+									</AuthorizeView>
+
 								</div>
 								@if (selectedSupplier != null)
 								{
@@ -68,13 +82,25 @@
 							<div class="row g-1">
 								<div class="col-md-12 mb-1">
 									<label class="form-label-sm mb-0">Співробітник</label>
-									<InputSelect class="form-select form-select-sm" @bind-Value="Order.EmployeeId">
-										@foreach (var employee in Employees)
-										{
-											<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
-										}
-									</InputSelect>
-									<ValidationMessage For="@(() => Order.EmployeeId)" />
+
+									<AuthorizeView Policy=@Roles.OfficeManager>
+										<Authorized Context="officeManagerCan">
+											<InputSelect class="form-select form-select-sm" @bind-Value="Order.EmployeeId">
+												@foreach (var employee in Employees)
+												{
+													<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
+												}
+											</InputSelect>
+
+											<ValidationMessage For="@(() => Order.EmployeeId)" />
+										</Authorized>
+									</AuthorizeView>
+
+									<AuthorizeView Policy=@Roles.WarehouseWorker>
+										<Authorized Context="warehouseWorkerForbid">
+											<span>@($"{selectedEmployee?.first_name} {selectedEmployee?.last_name}")</span>
+										</Authorized>
+									</AuthorizeView>
 								</div>
 								@if (selectedEmployee != null)
 								{
@@ -98,14 +124,14 @@
 				<div class="card-header bg-secondary text-white py-1 d-flex justify-content-between align-items-center">
 					<h6 class="mb-0">Управління обладнанням</h6>
 					<div>
-						<button type="button" class="btn btn-sm btn-success py-0 px-1 me-1" @onclick="AddPlacementItem"
-								disabled="@(tempNewPlacement != null || tempNewItem != null || !availableItemsForPlacement.Any() || IsOrderReadOnly)">
-							<i class="bi bi-box-arrow-right"></i> Нове розміщення
-						</button>
-						<button type="button" class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem"
-								disabled="@(hasMaxEquipment || tempNewItem != null || tempNewPlacement != null || IsOrderReadOnly)">
-							<i class="bi bi-plus-circle"></i> Додати обладнання
-						</button>
+						<AuthorizeView Policy=@Roles.OfficeManager>
+							<Authorized Context="AddEquipment">
+								<button type="button" class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem"
+										disabled="@(hasMaxEquipment || tempNewItem != null || tempNewPlacement != null || IsOrderReadOnly)">
+									<i class="bi bi-plus-circle"></i> Додати обладнання
+								</button>
+							</Authorized>
+						</AuthorizeView>
 					</div>
 				</div>
 				<div class="card-body p-2">
@@ -322,29 +348,38 @@
 										</td>
 										<td>
 											<div class="d-flex flex-column gap-1">
-												@if (remainingQty > 0 && item.IsExisting && !IsOrderReadOnly)
-												{
-													<button type="button" class="btn btn-sm btn-success py-0 px-1"
-															@onclick="() => InitPlacement(item)" title="Створити розміщення">
-														<i class="bi bi-box-arrow-right"></i> Розмістити
-													</button>
-												}
 
-												@if (item.IsExisting && placements.Any())
-												{
-													<button type="button" class="btn btn-sm btn-info py-0 px-1"
-															@onclick="() => ToggleDetails(item.SuppliedEquipmentId)" title="Переглянути розміщення">
-														<i class="bi bi-info-circle"></i> Деталі
-													</button>
-												}
+												<AuthorizeView Policy=@Roles.WarehouseWorker>
+													<Authorized Context="placementActions">
+														@if (remainingQty > 0 && item.IsExisting && !IsOrderReadOnly)
+														{
+															<button type="button" class="btn btn-sm btn-success py-0 px-1"
+																	@onclick="() => InitPlacement(item)" title="Створити розміщення">
+																<i class="bi bi-box-arrow-right"></i> Розмістити
+															</button>
+														}
 
-												@if (canDelete && !IsOrderReadOnly)
-												{
-													<button type="button" class="btn btn-sm btn-danger py-0 px-1"
-															@onclick="() => ConfirmRemoveEquipmentItem(item)" title="Видалити">
-														<i class="bi bi-trash"></i> Видалити
-													</button>
-												}
+														@if (item.IsExisting && placements.Any())
+														{
+															<button type="button" class="btn btn-sm btn-info py-0 px-1"
+																	@onclick="() => ToggleDetails(item.SuppliedEquipmentId)" title="Переглянути розміщення">
+																<i class="bi bi-info-circle"></i> Деталі
+															</button>
+														}
+													</Authorized>
+												</AuthorizeView>
+
+												<AuthorizeView Policy=@Roles.OfficeManager>
+													<Authorized Context="deleteActions">
+														@if (canDelete && !IsOrderReadOnly)
+														{
+															<button type="button" class="btn btn-sm btn-danger py-0 px-1"
+																	@onclick="() => ConfirmRemoveEquipmentItem(item)" title="Видалити">
+																<i class="bi bi-trash"></i> Видалити
+															</button>
+														}
+													</Authorized>
+												</AuthorizeView>
 											</div>
 										</td>
 									</tr>
@@ -427,8 +462,8 @@
 	</div>
 
 	<!-- Фіксовані кнопки внизу -->
-	<div class="position-fixed bottom-0 end-0 p-3 bg-light border-top w-100 d-flex justify-content-end">
-		<button type="button" class="btn btn-sm btn-secondary me-2" @onclick="OnClose">Скасувати</button>
+	<div class="position-fixed bottom-0 end-0 p-3 border-top d-flex justify-content-end">
+		<button type="button" class="btn btn-sm btn-secondary me-2" @onclick="OnClose">Закрити</button>
 		<button type="button" class="btn btn-sm btn-primary" @onclick="SaveChanges">Зберегти зміни</button>
 	</div>
 </div>

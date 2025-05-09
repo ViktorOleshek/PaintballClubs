@@ -11,481 +11,472 @@
 @inject IJSRuntime JSRuntime
 @inject MudBlazor.ISnackbar Snackbar
 
-<AuthorizeView Policy=@Roles.OfficeManager>
-	<Authorized Context="authContext">
+<h3>Обладнання пейнтбольних клубів</h3>
 
-		<h3>Обладнання пейнтбольних клубів</h3>
-
-		<div class="card mb-2">
-			<div class="card-header p-2">
-				<div class="d-flex justify-content-between align-items-center mb-1">
-					<div class="d-flex align-items-center">
-						<h5 class="mb-0 me-2">Фільтри</h5>
-						<button class="btn btn-sm @(showFilters ? "btn-secondary" : "btn-outline-secondary")" @onclick="ToggleFilters">
-							<i class="bi @(showFilters ? "bi-funnel-fill" : "bi-funnel")"></i>
-						</button>
-					</div>
-					<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
-						<i class="bi bi-plus-circle"></i> Додати обладнання
-					</button>
-				</div>
-
-				@if (showFilters)
-				{
-					<div class="row g-1">
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Назва</span>
-								<input type="text" class="form-control" @bind="searchQuery" @bind:event="oninput"
-									   placeholder="Фільтр за назвою">
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Модель</span>
-								<input type="text" class="form-control" @bind="modelFilter" @bind:event="oninput"
-									   placeholder="Фільтр за моделлю">
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Бренд</span>
-								<select class="form-select form-select-sm" @bind="brandFilter">
-									<option value="0">Всі бренди</option>
-									@foreach (var brand in brands)
-									{
-										<option value="@brand.brand_id">@brand.brand_name</option>
-									}
-								</select>
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Категорія</span>
-								<select class="form-select form-select-sm" @bind="categoryFilter">
-									<option value="0">Всі категорії</option>
-									@foreach (var category in categories)
-									{
-										<option value="@category.category_id">@category.category_name</option>
-									}
-								</select>
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Тип</span>
-								<select class="form-select form-select-sm" @bind="typeFilter">
-									<option value="0">Всі типи</option>
-									@foreach (var type in types)
-									{
-										<option value="@type.type_id">@type.type_name</option>
-									}
-								</select>
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Опис</span>
-								<input type="text" class="form-control" @bind="descriptionFilter" @bind:event="oninput"
-									   placeholder="Фільтр за описом">
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Дата</span>
-								<input type="date" class="form-control" @bind="dateFilter" @bind:format="yyyy-MM-dd">
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
-							<button class="btn btn-outline-secondary btn-sm w-100" @onclick="ClearFilters">
-								Очистити фільтри
-							</button>
-						</div>
-					</div>
-
-					<div class="row mt-2">
-						<div class="col-md-12">
-							<div class="btn-group btn-group-sm">
-								<span class="input-group-text">Сортування:</span>
-								<button class="btn @(sortField == "name" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
-										@onclick='() => ToggleSort("name")'>
-									Назва
-									@if (sortField == "name")
-									{
-										@if (ascending == true)
-										{
-											<i class="bi bi-sort-alpha-down"></i>
-										}
-										else if (ascending == false)
-										{
-											<i class="bi bi-sort-alpha-up-alt"></i>
-										}
-										else
-										{
-											<i class="bi bi-dash"></i>
-										}
-									}
-								</button>
-								<button class="btn @(sortField == "brand" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
-										@onclick='() => ToggleSort("brand")'>
-									Бренд
-									@if (sortField == "brand")
-									{
-										@if (ascending == true)
-										{
-											<i class="bi bi-sort-alpha-down"></i>
-										}
-										else if (ascending == false)
-										{
-											<i class="bi bi-sort-alpha-up-alt"></i>
-										}
-										else
-										{
-											<i class="bi bi-dash"></i>
-										}
-									}
-								</button>
-								<button class="btn @(sortField == "category" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
-										@onclick='() => ToggleSort("category")'>
-									Категорія
-									@if (sortField == "category")
-									{
-										@if (ascending == true)
-										{
-											<i class="bi bi-sort-alpha-down"></i>
-										}
-										else if (ascending == false)
-										{
-											<i class="bi bi-sort-alpha-up-alt"></i>
-										}
-										else
-										{
-											<i class="bi bi-dash"></i>
-										}
-									}
-								</button>
-								<button class="btn @(sortField == "type" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
-										@onclick='() => ToggleSort("type")'>
-									Тип
-									@if (sortField == "type")
-									{
-										@if (ascending == true)
-										{
-											<i class="bi bi-sort-alpha-down"></i>
-										}
-										else if (ascending == false)
-										{
-											<i class="bi bi-sort-alpha-up-alt"></i>
-										}
-										else
-										{
-											<i class="bi bi-dash"></i>
-										}
-									}
-								</button>
-								<button class="btn @(sortField == "model" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
-										@onclick='() => ToggleSort("model")'>
-									Модель
-									@if (sortField == "model")
-									{
-										@if (ascending == true)
-										{
-											<i class="bi bi-sort-alpha-down"></i>
-										}
-										else if (ascending == false)
-										{
-											<i class="bi bi-sort-alpha-up-alt"></i>
-										}
-										else
-										{
-											<i class="bi bi-dash"></i>
-										}
-									}
-								</button>
-							</div>
-						</div>
-					</div>
-				}
+<div class="card mb-2">
+	<div class="card-header p-2">
+		<div class="d-flex justify-content-between align-items-center mb-1">
+			<div class="d-flex align-items-center">
+				<h5 class="mb-0 me-2">Фільтри</h5>
+				<button class="btn btn-sm @(showFilters ? "btn-secondary" : "btn-outline-secondary")" @onclick="ToggleFilters">
+					<i class="bi @(showFilters ? "bi-funnel-fill" : "bi-funnel")"></i>
+				</button>
 			</div>
+			<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
+				<i class="bi bi-plus-circle"></i> Додати обладнання
+			</button>
 		</div>
 
-		@if (showAddNewForm)
+		@if (showFilters)
 		{
-			<div class="card mb-2">
-				<div class="card-header p-2 d-flex justify-content-between align-items-center bg-light">
-					<span><i class="bi bi-plus-circle me-1"></i>Додати обладнання</span>
-					<button type="button" class="btn-close" @onclick="ToggleAddNewForm"></button>
+			<div class="row g-1">
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Назва</span>
+						<input type="text" class="form-control" @bind="searchQuery" @bind:event="oninput"
+							   placeholder="Фільтр за назвою">
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Модель</span>
+						<input type="text" class="form-control" @bind="modelFilter" @bind:event="oninput"
+							   placeholder="Фільтр за моделлю">
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Бренд</span>
+						<select class="form-select form-select-sm" @bind="brandFilter">
+							<option value="0">Всі бренди</option>
+							@foreach (var brand in brands)
+							{
+								<option value="@brand.brand_id">@brand.brand_name</option>
+							}
+						</select>
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Категорія</span>
+						<select class="form-select form-select-sm" @bind="categoryFilter">
+							<option value="0">Всі категорії</option>
+							@foreach (var category in categories)
+							{
+								<option value="@category.category_id">@category.category_name</option>
+							}
+						</select>
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Тип</span>
+						<select class="form-select form-select-sm" @bind="typeFilter">
+							<option value="0">Всі типи</option>
+							@foreach (var type in types)
+							{
+								<option value="@type.type_id">@type.type_name</option>
+							}
+						</select>
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Опис</span>
+						<input type="text" class="form-control" @bind="descriptionFilter" @bind:event="oninput"
+							   placeholder="Фільтр за описом">
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<div class="input-group input-group-sm">
+						<span class="input-group-text">Дата</span>
+						<input type="date" class="form-control" @bind="dateFilter" @bind:format="yyyy-MM-dd">
+					</div>
+				</div>
+				<div class="col-md-3 col-lg-2">
+					<button class="btn btn-outline-secondary btn-sm w-100" @onclick="ClearFilters">
+						Очистити фільтри
+					</button>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<div class="col-md-12">
+					<div class="btn-group btn-group-sm">
+						<span class="input-group-text">Сортування:</span>
+						<button class="btn @(sortField == "name" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("name")'>
+							Назва
+							@if (sortField == "name")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
+						</button>
+						<button class="btn @(sortField == "brand" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("brand")'>
+							Бренд
+							@if (sortField == "brand")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
+						</button>
+						<button class="btn @(sortField == "category" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("category")'>
+							Категорія
+							@if (sortField == "category")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
+						</button>
+						<button class="btn @(sortField == "type" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("type")'>
+							Тип
+							@if (sortField == "type")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
+						</button>
+						<button class="btn @(sortField == "model" ? (ascending == true ? "btn-primary" : ascending == false ? "btn-secondary" : "btn-info") : "btn-outline-secondary")"
+								@onclick='() => ToggleSort("model")'>
+							Модель
+							@if (sortField == "model")
+							{
+								@if (ascending == true)
+								{
+									<i class="bi bi-sort-alpha-down"></i>
+								}
+								else if (ascending == false)
+								{
+									<i class="bi bi-sort-alpha-up-alt"></i>
+								}
+								else
+								{
+									<i class="bi bi-dash"></i>
+								}
+							}
+						</button>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+</div>
+
+@if (showAddNewForm)
+{
+	<div class="card mb-2">
+		<div class="card-header p-2 d-flex justify-content-between align-items-center bg-light">
+			<span><i class="bi bi-plus-circle me-1"></i>Додати обладнання</span>
+			<button type="button" class="btn-close" @onclick="ToggleAddNewForm"></button>
+		</div>
+		<div class="card-body p-2">
+			<EditForm Model="newEquipment" OnValidSubmit="AddNewEquipment">
+				<DataAnnotationsValidator />
+
+				<div class="row g-1">
+					<div class="col-md-4 col-lg-3">
+						<div class="mb-1">
+							<label class="form-label small mb-0">Назва*</label>
+							<InputText class="form-control form-control-sm py-1" @bind-Value="newEquipment.name" />
+							<ValidationMessage For="@(() => newEquipment.name)" class="text-danger small" />
+						</div>
+					</div>
+
+					<div class="col-md-4 col-lg-3">
+						<div class="mb-1">
+							<label class="form-label small mb-0">Модель*</label>
+							<InputText class="form-control form-control-sm py-1" @bind-Value="newEquipment.model" />
+							<ValidationMessage For="@(() => newEquipment.model)" class="text-danger small" />
+						</div>
+					</div>
+
+					<div class="col-md-4 col-lg-2">
+						<div class="mb-1">
+							<label class="form-label small mb-0">Бренд*</label>
+							<InputSelect class="form-select form-select-sm py-1" @bind-Value="newEquipment.brand_id">
+								@foreach (var brand in brands)
+								{
+									<option value="@brand.brand_id">@brand.brand_name</option>
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => newEquipment.brand_id)" class="text-danger small" />
+						</div>
+					</div>
+
+					<div class="col-md-4 col-lg-2">
+						<div class="mb-1">
+							<label class="form-label small mb-0">Категорія*</label>
+							<InputSelect class="form-select form-select-sm py-1" @bind-Value="newEquipment.category_id">
+								@foreach (var category in categories)
+								{
+									<option value="@category.category_id">@category.category_name</option>
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => newEquipment.category_id)" class="text-danger small" />
+						</div>
+					</div>
+
+					<div class="col-md-4 col-lg-2">
+						<div class="mb-1">
+							<label class="form-label small mb-0">Тип*</label>
+							<InputSelect class="form-select form-select-sm py-1" @bind-Value="newEquipment.type_id">
+								@foreach (var type in types)
+								{
+									<option value="@type.type_id">@type.type_name</option>
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => newEquipment.type_id)" class="text-danger small" />
+						</div>
+					</div>
+
+					<div class="col-md-8 col-lg-10">
+						<div class="mb-1">
+							<label class="form-label small mb-0">Опис</label>
+							<InputTextArea class="form-control form-control-sm py-1" @bind-Value="newEquipment.description" rows="1" />
+							<ValidationMessage For="@(() => newEquipment.description)" class="text-danger small" />
+						</div>
+					</div>
+
+					<div class="col-md-4 col-lg-2">
+						<div class="d-flex justify-content-end gap-1 h-100 align-items-end">
+							<button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
+							<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+						</div>
+					</div>
+				</div>
+			</EditForm>
+		</div>
+	</div>
+}
+
+<div class="row g-2" style="max-height: 490px; overflow-y: auto;">
+	@foreach (var equipment in PaginatedEquipments)
+	{
+		<div class="col-md-4 col-lg-3 col-xl-2-4 mb-2">
+			<div class="card h-100 shadow-sm equipment-card-container">
+				<div class="card-header p-2 d-flex justify-content-between">
+					@if (editingEquipment?.equipment_id == equipment.equipment_id)
+					{
+						<EditForm Model="editingEquipment" OnValidSubmit="SaveEquipment" class="w-100">
+							<DataAnnotationsValidator />
+							<InputText class="form-control form-control-sm" @bind-Value="editingEquipment.name"
+									   placeholder="Назва обладнання" />
+							<ValidationMessage For="@(() => editingEquipment.name)" class="text-danger small" />
+						</EditForm>
+					}
+					else
+					{
+						<h5 class="card-title mb-2 text-truncate">@equipment.name</h5>
+					}
+					<div class="btn-group btn-group-sm ms-2">
+						@if (editingEquipment?.equipment_id == equipment.equipment_id)
+						{
+							<button class="btn btn-success btn-sm p-2" @onclick="SaveEquipment">
+								<i class="bi bi-check"></i>
+							</button>
+							<button class="btn btn-secondary btn-sm p-2" @onclick="CancelEditing">
+								<i class="bi bi-x"></i>
+							</button>
+						}
+						else
+						{
+							<button class="btn btn-primary btn-sm p-2" @onclick="() => EditEquipment(equipment)">
+								<i class="bi bi-pencil"></i>
+							</button>
+							<button class="btn btn-danger btn-sm p-2" @onclick="() => ConfirmDelete(equipment)">
+								<i class="bi bi-trash"></i>
+							</button>
+						}
+					</div>
 				</div>
 				<div class="card-body p-2">
-					<EditForm Model="newEquipment" OnValidSubmit="AddNewEquipment">
-						<DataAnnotationsValidator />
-
-						<div class="row g-1">
-							<div class="col-md-4 col-lg-3">
-								<div class="mb-1">
-									<label class="form-label small mb-0">Назва*</label>
-									<InputText class="form-control form-control-sm py-1" @bind-Value="newEquipment.name" />
-									<ValidationMessage For="@(() => newEquipment.name)" class="text-danger small" />
-								</div>
+					@if (editingEquipment?.equipment_id == equipment.equipment_id)
+					{
+						<EditForm Model="editingEquipment" OnValidSubmit="SaveEquipment">
+							<DataAnnotationsValidator />
+							<div class="mb-1">
+								<label class="form-label small mb-0">Модель</label>
+								<InputText class="form-control form-control-sm py-1" @bind-Value="editingEquipment.model" />
 							</div>
-
-							<div class="col-md-4 col-lg-3">
-								<div class="mb-1">
-									<label class="form-label small mb-0">Модель*</label>
-									<InputText class="form-control form-control-sm py-1" @bind-Value="newEquipment.model" />
-									<ValidationMessage For="@(() => newEquipment.model)" class="text-danger small" />
-								</div>
-							</div>
-
-							<div class="col-md-4 col-lg-2">
-								<div class="mb-1">
-									<label class="form-label small mb-0">Бренд*</label>
-									<InputSelect class="form-select form-select-sm py-1" @bind-Value="newEquipment.brand_id">
+							<div class="row g-1 mb-1">
+								<div class="col-12 mb-1">
+									<label class="form-label small mb-0">Бренд</label>
+									<InputSelect class="form-select form-select-sm py-1" @bind-Value="editingEquipment.brand_id">
 										@foreach (var brand in brands)
 										{
 											<option value="@brand.brand_id">@brand.brand_name</option>
 										}
 									</InputSelect>
-									<ValidationMessage For="@(() => newEquipment.brand_id)" class="text-danger small" />
 								</div>
-							</div>
-
-							<div class="col-md-4 col-lg-2">
-								<div class="mb-1">
-									<label class="form-label small mb-0">Категорія*</label>
-									<InputSelect class="form-select form-select-sm py-1" @bind-Value="newEquipment.category_id">
+								<div class="col-6">
+									<label class="form-label small mb-0">Категорія</label>
+									<InputSelect class="form-select form-select-sm py-1" @bind-Value="editingEquipment.category_id">
 										@foreach (var category in categories)
 										{
 											<option value="@category.category_id">@category.category_name</option>
 										}
 									</InputSelect>
-									<ValidationMessage For="@(() => newEquipment.category_id)" class="text-danger small" />
 								</div>
-							</div>
-
-							<div class="col-md-4 col-lg-2">
-								<div class="mb-1">
-									<label class="form-label small mb-0">Тип*</label>
-									<InputSelect class="form-select form-select-sm py-1" @bind-Value="newEquipment.type_id">
+								<div class="col-6">
+									<label class="form-label small mb-0">Тип</label>
+									<InputSelect class="form-select form-select-sm py-1" @bind-Value="editingEquipment.type_id">
 										@foreach (var type in types)
 										{
 											<option value="@type.type_id">@type.type_name</option>
 										}
 									</InputSelect>
-									<ValidationMessage For="@(() => newEquipment.type_id)" class="text-danger small" />
 								</div>
 							</div>
-
-							<div class="col-md-8 col-lg-10">
-								<div class="mb-1">
-									<label class="form-label small mb-0">Опис</label>
-									<InputTextArea class="form-control form-control-sm py-1" @bind-Value="newEquipment.description" rows="1" />
-									<ValidationMessage For="@(() => newEquipment.description)" class="text-danger small" />
-								</div>
+							<div>
+								<label class="form-label small mb-0">Опис</label>
+								<InputTextArea class="form-control form-control-sm py-1" @bind-Value="editingEquipment.description" rows="2" />
 							</div>
-
-							<div class="col-md-4 col-lg-2">
-								<div class="d-flex justify-content-end gap-1 h-100 align-items-end">
-									<button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
-									<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
-								</div>
-							</div>
+						</EditForm>
+					}
+					else
+					{
+						<div class="mb-1 d-flex">
+							<span class="badge bg-primary me-1 fs-7">@GetBrandName(equipment.brand_id)</span>
+							<span class="badge bg-secondary me-1 fs-7">@GetCategoryName(equipment.category_id)</span>
+							<span class="badge bg-info text-dark fs-7">@GetTypeName(equipment.type_id)</span>
 						</div>
-					</EditForm>
-				</div>
-			</div>
-		}
+						@if (!string.IsNullOrEmpty(equipment.model))
+						{
+							<p class="card-text fs-6 mb-1"><strong>Модель:</strong> @equipment.model</p>
+						}
+						@if (!string.IsNullOrEmpty(equipment.description))
+						{
+							<p class="card-text fs-6 mb-1 text-truncate" title="@equipment.description">@equipment.description</p>
+						}
 
-		<div class="row g-2" style="max-height: 490px; overflow-y: auto;">
-			@foreach (var equipment in PaginatedEquipments)
-			{
-				<div class="col-md-4 col-lg-3 col-xl-2-4 mb-2">
-					<div class="card h-100 shadow-sm equipment-card-container">
-						<div class="card-header p-2 d-flex justify-content-between">
-							@if (editingEquipment?.equipment_id == equipment.equipment_id)
-							{
-								<EditForm Model="editingEquipment" OnValidSubmit="SaveEquipment" class="w-100">
-									<DataAnnotationsValidator />
-									<InputText class="form-control form-control-sm" @bind-Value="editingEquipment.name"
-											   placeholder="Назва обладнання" />
-									<ValidationMessage For="@(() => editingEquipment.name)" class="text-danger small" />
-								</EditForm>
-							}
-							else
-							{
-								<h5 class="card-title mb-2 text-truncate">@equipment.name</h5>
-							}
-							<div class="btn-group btn-group-sm ms-2">
-								@if (editingEquipment?.equipment_id == equipment.equipment_id)
-								{
-									<button class="btn btn-success btn-sm p-2" @onclick="SaveEquipment">
-										<i class="bi bi-check"></i>
-									</button>
-									<button class="btn btn-secondary btn-sm p-2" @onclick="CancelEditing">
-										<i class="bi bi-x"></i>
-									</button>
-								}
-								else
-								{
-									<button class="btn btn-primary btn-sm p-2" @onclick="() => EditEquipment(equipment)">
-										<i class="bi bi-pencil"></i>
-									</button>
-									<button class="btn btn-danger btn-sm p-2" @onclick="() => ConfirmDelete(equipment)">
-										<i class="bi bi-trash"></i>
-									</button>
-								}
-							</div>
-						</div>
-						<div class="card-body p-2">
-							@if (editingEquipment?.equipment_id == equipment.equipment_id)
-							{
-								<EditForm Model="editingEquipment" OnValidSubmit="SaveEquipment">
-									<DataAnnotationsValidator />
-									<div class="mb-1">
-										<label class="form-label small mb-0">Модель</label>
-										<InputText class="form-control form-control-sm py-1" @bind-Value="editingEquipment.model" />
-									</div>
-									<div class="row g-1 mb-1">
-										<div class="col-12 mb-1">
-											<label class="form-label small mb-0">Бренд</label>
-											<InputSelect class="form-select form-select-sm py-1" @bind-Value="editingEquipment.brand_id">
-												@foreach (var brand in brands)
-												{
-													<option value="@brand.brand_id">@brand.brand_name</option>
-												}
-											</InputSelect>
-										</div>
-										<div class="col-6">
-											<label class="form-label small mb-0">Категорія</label>
-											<InputSelect class="form-select form-select-sm py-1" @bind-Value="editingEquipment.category_id">
-												@foreach (var category in categories)
-												{
-													<option value="@category.category_id">@category.category_name</option>
-												}
-											</InputSelect>
-										</div>
-										<div class="col-6">
-											<label class="form-label small mb-0">Тип</label>
-											<InputSelect class="form-select form-select-sm py-1" @bind-Value="editingEquipment.type_id">
-												@foreach (var type in types)
-												{
-													<option value="@type.type_id">@type.type_name</option>
-												}
-											</InputSelect>
-										</div>
-									</div>
-									<div>
-										<label class="form-label small mb-0">Опис</label>
-										<InputTextArea class="form-control form-control-sm py-1" @bind-Value="editingEquipment.description" rows="2" />
-									</div>
-								</EditForm>
-							}
-							else
-							{
-								<div class="mb-1 d-flex">
-									<span class="badge bg-primary me-1 fs-7">@GetBrandName(equipment.brand_id)</span>
-									<span class="badge bg-secondary me-1 fs-7">@GetCategoryName(equipment.category_id)</span>
-									<span class="badge bg-info text-dark fs-7">@GetTypeName(equipment.type_id)</span>
-								</div>
-								@if (!string.IsNullOrEmpty(equipment.model))
-								{
-									<p class="card-text fs-6 mb-1"><strong>Модель:</strong> @equipment.model</p>
-								}
-								@if (!string.IsNullOrEmpty(equipment.description))
-								{
-									<p class="card-text fs-6 mb-1 text-truncate" title="@equipment.description">@equipment.description</p>
-								}
+						@if (equipmentCounts.ContainsKey(equipment.equipment_id))
+						{
+							var count = equipmentCounts[equipment.equipment_id];
+							<div class="mt-2">
+								<button class="btn btn-sm btn-outline-info w-100" @onclick="() => ToggleEquipmentInfo(equipment.equipment_id)">
+									Кількість: @count.TotalCount шт.
+									<i class="bi @(selectedEquipmentId == equipment.equipment_id ? "bi-chevron-up" : "bi-chevron-down")"></i>
+								</button>
 
-								@if (equipmentCounts.ContainsKey(equipment.equipment_id))
+								@if (selectedEquipmentId == equipment.equipment_id)
 								{
-									var count = equipmentCounts[equipment.equipment_id];
-									<div class="mt-2">
-										<button class="btn btn-sm btn-outline-info w-100" @onclick="() => ToggleEquipmentInfo(equipment.equipment_id)">
-											Кількість: @count.TotalCount шт.
-											<i class="bi @(selectedEquipmentId == equipment.equipment_id ? "bi-chevron-up" : "bi-chevron-down")"></i>
-										</button>
-
-										@if (selectedEquipmentId == equipment.equipment_id)
+									<div class="card mt-1 p-1 bg-light equipment-details">
+										@if (count.ClubCounts.Any())
 										{
-											<div class="card mt-1 p-1 bg-light equipment-details">
-												@if (count.ClubCounts.Any())
-												{
-													<div class="list-group list-group-flush small overflow-auto" style="max-height: 150px;">
-														<div class="list-group-item py-1 px-2 d-flex text-secondary fw-bold">
-															<div class="col-6">Клуб</div>
-															<div class="col-3 text-center">Штук</div>
-															<div class="col-3 text-end">Ціна</div>
-														</div>
+											<div class="list-group list-group-flush small overflow-auto" style="max-height: 150px;">
+												<div class="list-group-item py-1 px-2 d-flex text-secondary fw-bold">
+													<div class="col-6">Клуб</div>
+													<div class="col-3 text-center">Штук</div>
+													<div class="col-3 text-end">Ціна</div>
+												</div>
 
-														@foreach (var clubCount in count.ClubCounts.OrderByDescending(c => c.Count))
-														{
-															<div class="list-group-item py-1 px-2 d-flex align-items-center">
-																<div class="col-6 text-truncate" title="@clubCount.ClubName">@clubCount.ClubName</div>
-																<div class="col-3 text-center"><strong>@clubCount.Count</strong></div>
-																<div class="col-3 text-end text-success">@clubCount.RentalPrice.ToString("F2") грн</div>
-															</div>
-														}
-													</div>
-												}
-												else
+												@foreach (var clubCount in count.ClubCounts.OrderByDescending(c => c.Count))
 												{
-													<div class="text-center p-2 small">Немає в наявності в клубах</div>
+													<div class="list-group-item py-1 px-2 d-flex align-items-center">
+														<div class="col-6 text-truncate" title="@clubCount.ClubName">@clubCount.ClubName</div>
+														<div class="col-3 text-center"><strong>@clubCount.Count</strong></div>
+														<div class="col-3 text-end text-success">@clubCount.RentalPrice.ToString("F2") грн</div>
+													</div>
 												}
 											</div>
 										}
+										else
+										{
+											<div class="text-center p-2 small">Немає в наявності в клубах</div>
+										}
 									</div>
 								}
-							}
-						</div>
-					</div>
-				</div>
-			}
-		</div>
-
-		@if (equipments.Count == 0)
-		{
-			<div class="alert alert-info">Обладнання не знайдено.</div>
-		}
-		else if (FilteredEquipments.Count() == 0)
-		{
-			<div class="alert alert-info">За вказаними фільтрами обладнання не знайдено.</div>
-		}
-
-		<div class="mt-3">
-			<PaginationControl CurrentPage="currentPage"
-							   PageSize="pageSize"
-							   TotalItems="FilteredEquipments.Count()"
-							   TotalPages="TotalPages"
-							   OnPageChanged="GoToPage"
-							   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
-		</div>
-
-		@if (showDeleteConfirmation)
-		{
-			<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
-				<div class="modal-dialog modal-dialog-centered">
-					<div class="modal-content">
-						<div class="modal-header">
-							<h5 class="modal-title">Підтвердження видалення</h5>
-							<button type="button" class="btn-close" @onclick="CancelDelete"></button>
-						</div>
-						<div class="modal-body">
-							<p>Ви впевнені, що хочете видалити обладнання "@equipmentToDelete?.name"?</p>
-						</div>
-						<div class="modal-footer">
-							<button type="button" class="btn btn-secondary" @onclick="CancelDelete">Скасувати</button>
-							<button type="button" class="btn btn-danger" @onclick="DeleteEquipment">Видалити</button>
-						</div>
-					</div>
+							</div>
+						}
+					}
 				</div>
 			</div>
-		}
+		</div>
+	}
+</div>
 
-	</Authorized>
-	<NotAuthorized>
-		<p>Ця функція доступна тільки для офіс-менеджерів.</p>
-	</NotAuthorized>
-</AuthorizeView>
+@if (equipments.Count == 0)
+{
+	<div class="alert alert-info">Обладнання не знайдено.</div>
+}
+else if (FilteredEquipments.Count() == 0)
+{
+	<div class="alert alert-info">За вказаними фільтрами обладнання не знайдено.</div>
+}
+
+<div class="mt-3">
+	<PaginationControl CurrentPage="currentPage"
+					   PageSize="pageSize"
+					   TotalItems="FilteredEquipments.Count()"
+					   TotalPages="TotalPages"
+					   OnPageChanged="GoToPage"
+					   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
+</div>
+
+@if (showDeleteConfirmation)
+{
+	<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Підтвердження видалення</h5>
+					<button type="button" class="btn-close" @onclick="CancelDelete"></button>
+				</div>
+				<div class="modal-body">
+					<p>Ви впевнені, що хочете видалити обладнання "@equipmentToDelete?.name"?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" @onclick="CancelDelete">Скасувати</button>
+					<button type="button" class="btn btn-danger" @onclick="DeleteEquipment">Видалити</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
 
 @code {
 	// Pagination parameters

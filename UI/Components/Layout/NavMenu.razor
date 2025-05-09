@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Domain.Constants
+@using Microsoft.AspNetCore.Components.Authorization
+<div class="top-row ps-3 navbar navbar-dark">
 	<div class="container-fluid">
 		<a class="navbar-brand" href="">Пейнтбол</a>
 	</div>
@@ -14,47 +16,79 @@
 			</NavLink>
 		</div>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/orders" Match="NavLinkMatch.All">
-				<span class="bi " aria-hidden="true"></span> Замовлення матчів
-			</NavLink>
-		</div>
+		<AuthorizeView Policy=@Roles.TechnicalSpecialist>
+			<Authorized>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/orders" Match="NavLinkMatch.All">
+						<span class="bi " aria-hidden="true"></span> Замовлення матчів
+					</NavLink>
+				</div>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/supply-orders" Match="NavLinkMatch.All">
-				<span class="bi" aria-hidden="true"></span> Замовлення доставки
-			</NavLink>
-		</div>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/cluboffers" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Пропозиції клубів
+					</NavLink>
+				</div>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/suppliers" Match="NavLinkMatch.All">
-				<span class="bi" aria-hidden="true"></span> Постачальники
-			</NavLink>
-		</div>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/equipments" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Обладнання
+					</NavLink>
+				</div>
+			</Authorized>
+		</AuthorizeView>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/cluboffers" Match="NavLinkMatch.All">
-				<span class="bi" aria-hidden="true"></span> Пропозиції клубів
-			</NavLink>
-		</div>
+		<AuthorizeView Policy=@Roles.OfficeManager>
+			<Authorized>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/suppliers" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Постачальники
+					</NavLink>
+				</div>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/equipments" Match="NavLinkMatch.All">
-				<span class="bi" aria-hidden="true"></span> Обладнання
-			</NavLink>
-		</div>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/equipments" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Обладнання
+					</NavLink>
+				</div>
+			</Authorized>
+		</AuthorizeView>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/clubs" Match="NavLinkMatch.All">
-				<span class="bi" aria-hidden="true"></span> Клуби і працівники
-			</NavLink>
-		</div>
+		<AuthorizeView Policy=@Roles.WarehouseWorker>
+			<Authorized>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/clubs" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Клуби і працівники
+					</NavLink>
+				</div>
 
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="/employees" Match="NavLinkMatch.All">
-				<span class="bi" aria-hidden="true"></span> Працівники
-			</NavLink>
-		</div>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/equipments" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Обладнання
+					</NavLink>
+				</div>
+			</Authorized>
+		</AuthorizeView>
+
+		<AuthorizeView Policy=@Policies.OfficeManagerAndWarehouseWorker>
+			<Authorized>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/supply-orders" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Замовлення доставки
+					</NavLink>
+				</div>
+			</Authorized>
+		</AuthorizeView>
+
+		<AuthorizeView Policy=@Roles.GlobalAdmin>
+			<Authorized>
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="/employees" Match="NavLinkMatch.All">
+						<span class="bi" aria-hidden="true"></span> Працівники
+					</NavLink>
+				</div>
+			</Authorized>
+		</AuthorizeView>
 	</nav>
 </div>
 
