@@ -10,7 +10,7 @@
 	{
 		<div class="card shadow">
 			<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-				<h5 class="mb-0">Add New Order</h5>
+				<h5 class="mb-0">Додати нове замовлення</h5>
 				<button type="button" class="btn-close btn-close-white" @onclick="CancelAddOrder"></button>
 			</div>
 			<div class="card-body">
@@ -21,14 +21,14 @@
 					<div class="row mb-3">
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Order Number</label>
+								<label class="form-label">Номер замовлення</label>
 								<InputText @bind-Value="newOrder.OrderNumber" class="form-control" readonly />
 								<ValidationMessage For="@(() => newOrder.OrderNumber)" />
 							</div>
 						</div>
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Status</label>
+								<label class="form-label">Статус</label>
 								<InputSelect @bind-Value="newOrder.StatusId" class="form-select">
 									@foreach (var status in statuses)
 									{
@@ -42,7 +42,7 @@
 					<div class="row mb-3">
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Club</label>
+								<label class="form-label">Клуб</label>
 								<InputSelect @bind-Value="selectedClubId" class="form-select" @onchange="ClubChanged">
 									@foreach (var club in clubs)
 									{
@@ -53,7 +53,7 @@
 						</div>
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Employee</label>
+								<label class="form-label">Співробітник</label>
 								<InputSelect @bind-Value="newOrder.EmployeeId" class="form-select">
 									@foreach (var employee in filteredEmployees)
 									{
@@ -67,7 +67,7 @@
 					<div class="row mb-3">
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Club Offer</label>
+								<label class="form-label">Пропозиція клубу</label>
 								<InputSelect @bind-Value="newOrder.OfferId" class="form-select">
 									@foreach (var offer in offers)
 									{
@@ -78,10 +78,10 @@
 						</div>
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Client</label>
+								<label class="form-label">Клієнт</label>
 								<div class="input-group">
 									<InputSelect @bind-Value="clientSelection" class="form-select">
-										<option value="0">New Client</option>
+										<option value="0">Новий клієнт</option>
 										@foreach (var client in clients)
 										{
 											<option value="@client.client_id">@client.first_name @client.last_name</option>
@@ -96,30 +96,30 @@
 					{
 						<div class="card mb-3">
 							<div class="card-header bg-light">
-								<h6 class="mb-0">New Client Information</h6>
+								<h6 class="mb-0">Інформація про нового клієнта</h6>
 							</div>
 							<div class="card-body">
 								<div class="row">
 									<div class="col-12 col-md-6 mb-2">
-										<label class="form-label">First Name</label>
+										<label class="form-label">Ім'я</label>
 										<InputText @bind-Value="newClient.first_name" class="form-control" />
 										<ValidationMessage For="@(() => newClient.first_name)" />
 									</div>
 									<div class="col-12 col-md-6 mb-2">
-										<label class="form-label">Last Name</label>
+										<label class="form-label">Прізвище</label>
 										<InputText @bind-Value="newClient.last_name" class="form-control" />
 										<ValidationMessage For="@(() => newClient.last_name)" />
 									</div>
 									<div class="col-12 col-md-6 mb-2">
-										<label class="form-label">Birth Date</label>
+										<label class="form-label">Дата народження</label>
 										<InputDate @bind-Value="newClientBirthDate" class="form-control" />
 									</div>
 									<div class="col-12 col-md-6 mb-2">
-										<label class="form-label">Phone Number</label>
+										<label class="form-label">Номер телефону</label>
 										<InputText @bind-Value="newClient.phone_number" class="form-control" />
 									</div>
 									<div class="col-12 mb-2">
-										<label class="form-label">Email</label>
+										<label class="form-label">Електронна пошта</label>
 										<InputText @bind-Value="newClient.email" class="form-control" />
 									</div>
 								</div>
@@ -130,13 +130,13 @@
 					<div class="row mb-3">
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Order Date</label>
+								<label class="form-label">Дата замовлення</label>
 								<InputDate @bind-Value="newOrder.OrderDate" class="form-control" />
 							</div>
 						</div>
 						<div class="col-12 col-md-6">
 							<div class="form-group">
-								<label class="form-label">Event Date</label>
+								<label class="form-label">Дата події</label>
 								<InputDate @bind-Value="newOrder.EventDate" class="form-control" />
 							</div>
 						</div>
@@ -145,14 +145,14 @@
 					<!-- Match Details Section -->
 					<div class="card mb-3">
 						<div class="card-header bg-light">
-							<h6 class="mb-0">Match Details</h6>
+							<h6 class="mb-0">Деталі матчу</h6>
 						</div>
 						<div class="card-body">
 							<div class="row">
 								<div class="col-12 col-md-6 mb-2">
-									<label class="form-label">Location</label>
+									<label class="form-label">Локація</label>
 									<InputSelect @bind-Value="newMatch.location_id" class="form-select">
-										<option value="">-- Select Location --</option>
+										<option value="">-- Виберіть локацію --</option>
 										@foreach (var location in locations)
 										{
 											<option value="@location.location_id">@location.location_name</option>
@@ -160,11 +160,11 @@
 									</InputSelect>
 								</div>
 								<div class="col-12 col-md-6 mb-2">
-									<label class="form-label">Participants</label>
+									<label class="form-label">Кількість учасників</label>
 									<InputNumber @bind-Value="newMatch.participant_count" class="form-control" />
 								</div>
 								<div class="col-12 mb-2">
-									<label class="form-label">Description</label>
+									<label class="form-label">Опис</label>
 									<InputTextArea @bind-Value="newMatch.description" class="form-control" rows="2" />
 								</div>
 							</div>
@@ -270,7 +270,7 @@
 								<div class="alert alert-info py-2 mt-3">
 									Обладнання ще не додано. Виберіть обладнання вище, щоб додати його до замовлення.
 								</div>
-							}
+							}	
 						</div>
 					</div>
 
@@ -279,7 +279,7 @@
 							<div class="form-group">
 								<label class="form-label">Загальна сума</label>
 								<div class="input-group">
-									<span class="input-group-text">$</span>
+									<span class="input-group-text">₴</span>
 									<input type="text" class="form-control" value="@CalculateTotalAmount().ToString("F2")" readonly />
 								</div>
 							</div>
@@ -287,8 +287,8 @@
 					</div>
 
 					<div class="d-flex justify-content-end mt-3">
-						<button type="button" class="btn btn-secondary me-2" @onclick="CancelAddOrder">Cancel</button>
-						<button type="submit" class="btn btn-success">Save</button>
+						<button type="button" class="btn btn-secondary me-2" @onclick="CancelAddOrder">Скасувати</button>
+						<button type="submit" class="btn btn-success">Зберегти</button>
 					</div>
 				</EditForm>
 			</div>

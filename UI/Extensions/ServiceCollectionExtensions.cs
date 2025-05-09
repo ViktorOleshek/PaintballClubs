@@ -1,4 +1,6 @@
 ﻿using BlazorDownloadFile;
+using Domain.Constants;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Refit;
@@ -65,6 +67,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IApiFacade, ApiFacade>();
 
+        AddPolicy(services);
+
         return services;
     }
     private static IServiceCollection AddRefitService<T>(
@@ -77,6 +81,34 @@ public static class ServiceCollectionExtensions
             var httpClient = sp.GetRequiredService<IHttpClientFactory>()
                 .CreateClient("CursWorkApi");
             return RestService.For<T>(httpClient, settings);
+        });
+
+        return services;
+    }
+
+    private static IServiceCollection AddPolicy(
+    this IServiceCollection services)
+    {
+        services.AddAuthorizationCore(options =>
+        {
+            // Базові політики для ролей
+            options.AddPolicy(Roles.GlobalAdmin, policy => policy.RequireRole(Roles.GlobalAdmin));
+            options.AddPolicy(Roles.OfficeManager, policy => policy.RequireRole(Roles.OfficeManager));
+            options.AddPolicy(Roles.TechnicalSpecialist, policy => policy.RequireRole(Roles.TechnicalSpecialist));
+            options.AddPolicy(Roles.WarehouseWorker, policy => policy.RequireRole(Roles.WarehouseWorker));
+
+            // Комбіновані політики
+            options.AddPolicy(Policies.OfficeManagerAndWarehouseWorker, policy =>
+                policy.RequireRole(Roles.OfficeManager, Roles.WarehouseWorker));
+
+            //// Політика з власною логікою
+            //options.AddPolicy("CanManageEmployees", policy =>
+            //    policy.RequireAssertion(context =>
+            //        context.User.IsInRole("Admin") ||
+            //        context.User.IsInRole("HR") ||
+            //        (context.User.IsInRole("Manager") && context.User.HasClaim(c =>
+            //            c.Type == "Department" && c.Value == "HR"))
+            //    ));
         });
 
         return services;

@@ -7,7 +7,7 @@
 
 <div class="order-details-panel">
 	<div class="order-details-header">
-		<h4>Order #@Order.SupplyOrderNumber Details</h4>
+		<h4>Деталі Замовлення #@Order.SupplyOrderNumber</h4>
 		<button type="button" class="btn-close position-fixed top-0 end-0 m-3" @onclick="OnClose"></button>
 	</div>
 
@@ -16,16 +16,16 @@
 			<DataAnnotationsValidator />
 
 			<div class="row g-2">
-				<!-- First row with cards -->
+				<!-- Перший ряд з картками -->
 				<div class="col-md-4">
 					<div class="card card-compact mb-2">
 						<div class="card-header bg-info text-white py-1">
-							<h6 class="mb-0">Supplier Information</h6>
+							<h6 class="mb-0">Інформація про постачальника</h6>
 						</div>
 						<div class="card-body p-2">
 							<div class="row g-1">
 								<div class="col-md-12 mb-1">
-									<label class="form-label-sm mb-0">Supplier</label>
+									<label class="form-label-sm mb-0">Постачальник</label>
 									<InputSelect class="form-select form-select-sm" @bind-Value="Order.SupplierId">
 										@foreach (var supplier in Suppliers)
 										{
@@ -37,7 +37,7 @@
 								@if (selectedSupplier != null)
 								{
 									<div class="col-md-12 mb-1">
-										<label class="form-label-sm mb-0">Contact</label>
+										<label class="form-label-sm mb-0">Контакти</label>
 										<div class="d-flex">
 											@if (!string.IsNullOrEmpty(selectedSupplier.phone_number))
 											{
@@ -50,8 +50,8 @@
 										</div>
 									</div>
 									<div class="col-md-12">
-										<label class="form-label-sm mb-0">Address</label>
-										<p class="small mb-0 text-muted">@(string.IsNullOrEmpty(selectedSupplier.address) ? "No address provided" : selectedSupplier.address)</p>
+										<label class="form-label-sm mb-0">Адреса</label>
+										<p class="small mb-0 text-muted">@(string.IsNullOrEmpty(selectedSupplier.address) ? "Адреса не вказана" : selectedSupplier.address)</p>
 									</div>
 								}
 							</div>
@@ -62,12 +62,12 @@
 				<div class="col-md-4">
 					<div class="card card-compact mb-2">
 						<div class="card-header bg-success text-white py-1">
-							<h6 class="mb-0">Employee Information</h6>
+							<h6 class="mb-0">Інформація про співробітника</h6>
 						</div>
 						<div class="card-body p-2">
 							<div class="row g-1">
 								<div class="col-md-12 mb-1">
-									<label class="form-label-sm mb-0">Employee</label>
+									<label class="form-label-sm mb-0">Співробітник</label>
 									<InputSelect class="form-select form-select-sm" @bind-Value="Order.EmployeeId">
 										@foreach (var employee in Employees)
 										{
@@ -79,11 +79,11 @@
 								@if (selectedEmployee != null)
 								{
 									<div class="col-md-6 mb-1">
-										<label class="form-label-sm mb-0">Position</label>
+										<label class="form-label-sm mb-0">Посада</label>
 										<span class="badge bg-light text-dark">@GetPositionName(selectedEmployee.position_id)</span>
 									</div>
 									<div class="col-md-12">
-										<label class="form-label-sm mb-0">Club</label>
+										<label class="form-label-sm mb-0">Клуб</label>
 										<span class="badge bg-light text-dark">@GetClubName(selectedEmployee.club_id)</span>
 									</div>
 								}
@@ -93,32 +93,32 @@
 				</div>
 			</div>
 
-			<!-- Combined Equipment Section -->
+			<!-- Об'єднаний розділ обладнання -->
 			<div class="card card-compact">
 				<div class="card-header bg-secondary text-white py-1 d-flex justify-content-between align-items-center">
-					<h6 class="mb-0">Equipment Management</h6>
+					<h6 class="mb-0">Управління обладнанням</h6>
 					<div>
 						<button type="button" class="btn btn-sm btn-success py-0 px-1 me-1" @onclick="AddPlacementItem"
 								disabled="@(tempNewPlacement != null || tempNewItem != null || !availableItemsForPlacement.Any() || IsOrderReadOnly)">
-							<i class="bi bi-box-arrow-right"></i> New Placement
+							<i class="bi bi-box-arrow-right"></i> Нове розміщення
 						</button>
 						<button type="button" class="btn btn-sm btn-light py-0 px-1" @onclick="AddEquipmentItem"
 								disabled="@(hasMaxEquipment || tempNewItem != null || tempNewPlacement != null || IsOrderReadOnly)">
-							<i class="bi bi-plus-circle"></i> Add Equipment
+							<i class="bi bi-plus-circle"></i> Додати обладнання
 						</button>
 					</div>
 				</div>
 				<div class="card-body p-2">
-					<!-- New Equipment Form -->
+					<!-- Форма нового обладнання -->
 					@if (tempNewItem != null)
 					{
 						<div class="mb-3 border p-2 bg-light">
-							<h6 class="small fw-bold">Add New Equipment</h6>
+							<h6 class="small fw-bold">Додати нове обладнання</h6>
 							<div class="row g-2">
 								<div class="col-md-3">
-									<label class="form-label-sm mb-0">Equipment</label>
+									<label class="form-label-sm mb-0">Обладнання</label>
 									<select class="form-select form-select-sm" @bind="tempNewItem.EquipmentId" @bind:after="UpdateEquipmentDetails">
-										<option value="0">-- Select Equipment --</option>
+										<option value="0">-- Оберіть обладнання --</option>
 										@foreach (var equip in EquipmentList)
 										{
 											<option value="@equip.equipment_id">@equip.name</option>
@@ -126,65 +126,65 @@
 									</select>
 								</div>
 								<div class="col-md-3">
-									<label class="form-label-sm mb-0">Category</label>
+									<label class="form-label-sm mb-0">Категорія</label>
 									<input type="text" class="form-control form-control-sm" value="@GetCategoryName(tempSelectedEquipment?.category_id ?? 0)" disabled />
 								</div>
 								<div class="col-md-2">
-									<label class="form-label-sm mb-0">Type</label>
+									<label class="form-label-sm mb-0">Тип</label>
 									<input type="text" class="form-control form-control-sm" value="@GetTypeName(tempSelectedEquipment?.type_id ?? 0)" disabled />
 								</div>
 								<div class="col-md-2">
-									<label class="form-label-sm mb-0">Brand</label>
+									<label class="form-label-sm mb-0">Бренд</label>
 									<input type="text" class="form-control form-control-sm" value="@GetBrandName(tempSelectedEquipment?.brand_id ?? 0)" disabled />
 								</div>
 								<div class="col-md-1">
-									<label class="form-label-sm mb-0">Quantity</label>
+									<label class="form-label-sm mb-0">Кількість</label>
 									<input type="number" class="form-control form-control-sm" @bind="tempNewItem.Quantity" min="1" />
 								</div>
 								<div class="col-md-1">
-									<label class="form-label-sm mb-0">Price</label>
+									<label class="form-label-sm mb-0">Ціна</label>
 									<input type="number" class="form-control form-control-sm" @bind="tempNewItem.Price" step="0.01" min="0" />
 								</div>
 							</div>
 							<div class="d-flex justify-content-end mt-2">
 								<button type="button" class="btn btn-sm btn-danger me-2" @onclick="CancelAddEquipment">
-									<i class="bi bi-x"></i> Cancel
+									<i class="bi bi-x"></i> Скасувати
 								</button>
 
 								<button type="button" class="btn btn-sm btn-success" @onclick="ConfirmAddEquipment"
 										disabled="@(tempNewItem.EquipmentId == 0 || tempNewItem.Quantity <= 0 || tempNewItem.Price <= 0)">
-									<i class="bi bi-check"></i> Confirm
+									<i class="bi bi-check"></i> Підтвердити
 								</button>
 							</div>
 						</div>
 					}
 
-					<!-- New Placement Form -->
+					<!-- Форма нового розміщення -->
 					@if (tempNewPlacement != null)
 					{
 						<div class="mb-3 border p-2 bg-info bg-opacity-10">
-							<h6 class="small fw-bold">Create New Placement</h6>
+							<h6 class="small fw-bold">Створити нове розміщення</h6>
 							<div class="row g-2">
 								<div class="col-md-3">
-									<label class="form-label-sm mb-0">Equipment</label>
+									<label class="form-label-sm mb-0">Обладнання</label>
 									<select class="form-select form-select-sm" @bind="tempNewPlacement.SuppliedEquipmentId" @bind:after="UpdatePlacementDetails">
-										<option value="0">-- Select Equipment --</option>
+										<option value="0">-- Оберіть обладнання --</option>
 										@foreach (var item in availableItemsForPlacement)
 										{
 											var equipment = EquipmentList.FirstOrDefault(e => e.equipment_id == item.EquipmentId);
-											<option value="@item.SuppliedEquipmentId">@item.EquipmentName (@GetRemainingQuantity(item) available)</option>
+											<option value="@item.SuppliedEquipmentId">@item.EquipmentName (@GetRemainingQuantity(item) доступно)</option>
 										}
 									</select>
 								</div>
 								<div class="col-md-2">
-									<label class="form-label-sm mb-0">Quantity</label>
+									<label class="form-label-sm mb-0">Кількість</label>
 									<input type="number" class="form-control form-control-sm" @bind="tempNewPlacement.Quantity"
 										   min="1" max="@tempMaxPlacementQuantity" />
 								</div>
 								<div class="col-md-3">
-									<label class="form-label-sm mb-0">Club</label>
+									<label class="form-label-sm mb-0">Клуб</label>
 									<select class="form-select form-select-sm" @bind="tempNewPlacement.ClubId">
-										<option value="0">-- Select Club --</option>
+										<option value="0">-- Оберіть клуб --</option>
 										@foreach (var club in Clubs)
 										{
 											<option value="@club.club_id">@club.name</option>
@@ -192,9 +192,9 @@
 									</select>
 								</div>
 								<div class="col-md-3">
-									<label class="form-label-sm mb-0">Employee</label>
+									<label class="form-label-sm mb-0">Співробітник</label>
 									<select class="form-select form-select-sm" @bind="tempNewPlacement.EmployeeId">
-										<option value="0">-- Select Employee --</option>
+										<option value="0">-- Оберіть співробітника --</option>
 										@foreach (var employee in Employees.Where(e => tempNewPlacement.ClubId == 0 || e.club_id == tempNewPlacement.ClubId))
 										{
 											<option value="@employee.employee_id">@($"{employee.first_name} {employee.last_name}")</option>
@@ -202,17 +202,17 @@
 									</select>
 								</div>
 								<div class="col-md-1">
-									<label class="form-label-sm mb-0">Date</label>
+									<label class="form-label-sm mb-0">Дата</label>
 									<input type="date" class="form-control form-control-sm" @bind="tempNewPlacement.PlacementDate" />
 								</div>
 							</div>
 							<div class="d-flex justify-content-end mt-2">
 								<button type="button" class="btn btn-sm btn-danger me-2" @onclick="CancelAddPlacement">
-									<i class="bi bi-x"></i> Cancel
+									<i class="bi bi-x"></i> Скасувати
 								</button>
 								<button type="button" class="btn btn-sm btn-success" @onclick="ConfirmAddPlacement"
 										disabled="@(!IsValidPlacement())">
-									<i class="bi bi-check"></i> Confirm
+									<i class="bi bi-check"></i> Підтвердити
 								</button>
 							</div>
 						</div>
@@ -222,14 +222,14 @@
 						<table class="table table-sm table-compact mb-0">
 							<thead>
 								<tr>
-									<th style="width: 20%;" class="small">Equipment</th>
-									<th style="width: 10%;" class="small">Category</th>
-									<th style="width: 10%;" class="small">Brand</th>
-									<th style="width: 8%;" class="small">Quantity</th>
-									<th style="width: 8%;" class="small">Price</th>
-									<th style="width: 8%;" class="small">Total</th>
-									<th style="width: 20%;" class="small">Placement Status</th>
-									<th style="width: 16%;" class="small">Actions</th>
+									<th style="width: 20%;" class="small">Обладнання</th>
+									<th style="width: 10%;" class="small">Категорія</th>
+									<th style="width: 10%;" class="small">Бренд</th>
+									<th style="width: 8%;" class="small">Кількість</th>
+									<th style="width: 8%;" class="small">Ціна</th>
+									<th style="width: 8%;" class="small">Усього</th>
+									<th style="width: 20%;" class="small">Статус розміщення</th>
+									<th style="width: 16%;" class="small">Дії</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -301,23 +301,23 @@
 											{
 												@if (placedQty == 0)
 												{
-													<span class="badge bg-warning text-dark">Pending</span>
+													<span class="badge bg-warning text-dark">Очікується</span>
 												}
 												else if (placedQty < item.Quantity)
 												{
 													<div class="d-flex flex-column">
-														<span class="badge bg-info">Partially Placed (@placedQty / @item.Quantity)</span>
-														<span class="text-muted small mt-1">@remainingQty left to place</span>
+														<span class="badge bg-info">Частково розміщено (@placedQty / @item.Quantity)</span>
+														<span class="text-muted small mt-1">Залишилось розмістити: @remainingQty</span>
 													</div>
 												}
 												else
 												{
-													<span class="badge bg-success">Fully Placed (@placedQty / @item.Quantity)</span>
+													<span class="badge bg-success">Повністю розміщено (@placedQty / @item.Quantity)</span>
 												}
 											}
 											else
 											{
-												<span class="badge bg-secondary">New</span>
+												<span class="badge bg-secondary">Новий</span>
 											}
 										</td>
 										<td>
@@ -325,24 +325,24 @@
 												@if (remainingQty > 0 && item.IsExisting && !IsOrderReadOnly)
 												{
 													<button type="button" class="btn btn-sm btn-success py-0 px-1"
-															@onclick="() => InitPlacement(item)" title="Create Placement">
-														<i class="bi bi-box-arrow-right"></i> Place
+															@onclick="() => InitPlacement(item)" title="Створити розміщення">
+														<i class="bi bi-box-arrow-right"></i> Розмістити
 													</button>
 												}
 
 												@if (item.IsExisting && placements.Any())
 												{
 													<button type="button" class="btn btn-sm btn-info py-0 px-1"
-															@onclick="() => ToggleDetails(item.SuppliedEquipmentId)" title="View Placements">
-														<i class="bi bi-info-circle"></i> Details
+															@onclick="() => ToggleDetails(item.SuppliedEquipmentId)" title="Переглянути розміщення">
+														<i class="bi bi-info-circle"></i> Деталі
 													</button>
 												}
 
 												@if (canDelete && !IsOrderReadOnly)
 												{
 													<button type="button" class="btn btn-sm btn-danger py-0 px-1"
-															@onclick="() => ConfirmRemoveEquipmentItem(item)" title="Delete">
-														<i class="bi bi-trash"></i> Delete
+															@onclick="() => ConfirmRemoveEquipmentItem(item)" title="Видалити">
+														<i class="bi bi-trash"></i> Видалити
 													</button>
 												}
 											</div>
@@ -355,18 +355,18 @@
 												<div class="bg-light p-2 border-top position-relative">
 													<button type="button" class="btn-close position-absolute top-0 end-0 mt-1 me-1"
 															@onclick="() => ToggleDetails(item.SuppliedEquipmentId)"
-															aria-label="Close">
+															aria-label="Закрити">
 													</button>
-													<h6 class="small mb-1">Placement Details:</h6>
+													<h6 class="small mb-1">Деталі розміщення:</h6>
 													<div class="table-responsive">
 														<table class="table table-sm mb-0">
 															<thead>
 																<tr>
-																	<th class="small">Date</th>
-																	<th class="small">Quantity</th>
-																	<th class="small">Employee</th>
-																	<th class="small">Club</th>
-																	<th class="small">Actions</th>
+																	<th class="small">Дата</th>
+																	<th class="small">Кількість</th>
+																	<th class="small">Співробітник</th>
+																	<th class="small">Клуб</th>
+																	<th class="small">Дії</th>
 																</tr>
 															</thead>
 															<tbody>
@@ -376,7 +376,7 @@
 
 																	<tr>
 																		<td class="small">@placement.placement_date.ToString("yyyy-MM-dd HH:mm")</td>
-																		<td class="small">@placement.quantity units</td>
+																		<td class="small">@placement.quantity одиниць</td>
 																		<td class="small">@GetEmployeeName(placement.employee_id)</td>
 																		<td class="small">
 																			@if (employee != null)
@@ -388,8 +388,8 @@
 																			@if (!IsOrderReadOnly)
 																			{
 																				<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1"
-																						@onclick="() => ConfirmRemovePlacement(placement)" title="Delete Placement">
-																					<i class="bi bi-trash"></i> Remove
+																						@onclick="() => ConfirmRemovePlacement(placement)" title="Видалити розміщення">
+																					<i class="bi bi-trash"></i> Видалити
 																				</button>
 																			}
 																		</td>
@@ -402,8 +402,8 @@
 													{
 														<div class="mt-1">
 															<button type="button" class="btn btn-sm btn-outline-success py-0 px-1"
-																	@onclick="() => InitPlacement(item)" title="Add More Placement">
-																<i class="bi bi-plus-circle"></i> Add Placement (@remainingQty units remaining)
+																	@onclick="() => InitPlacement(item)" title="Додати більше розміщень">
+																<i class="bi bi-plus-circle"></i> Додати розміщення (залишилось @remainingQty одиниць)
 															</button>
 														</div>
 													}
@@ -415,7 +415,7 @@
 							</tbody>
 							<tfoot>
 								<tr>
-									<td colspan="5" class="text-end fw-bold small">Total Order Amount:</td>
+									<td colspan="5" class="text-end fw-bold small">Загальна сума замовлення:</td>
 									<td colspan="3" class="fw-bold small">@Order.SuppliedEquipmentItems.Sum(i => i.Quantity * i.Price).ToString("C2")</td>
 								</tr>
 							</tfoot>
@@ -426,10 +426,10 @@
 		</EditForm>
 	</div>
 
-	<!-- Fixed buttons container -->
+	<!-- Фіксовані кнопки внизу -->
 	<div class="position-fixed bottom-0 end-0 p-3 bg-light border-top w-100 d-flex justify-content-end">
-		<button type="button" class="btn btn-sm btn-secondary me-2" @onclick="OnClose">Cancel</button>
-		<button type="button" class="btn btn-sm btn-primary" @onclick="SaveChanges">Save Changes</button>
+		<button type="button" class="btn btn-sm btn-secondary me-2" @onclick="OnClose">Скасувати</button>
+		<button type="button" class="btn btn-sm btn-primary" @onclick="SaveChanges">Зберегти зміни</button>
 	</div>
 </div>
 
@@ -522,33 +522,33 @@
 
 	private string GetPositionName(int positionId)
 	{
-		return Positions.FirstOrDefault(p => p.position_id == positionId)?.position_name ?? "Unknown";
+		return Positions.FirstOrDefault(p => p.position_id == positionId)?.position_name ?? "Невідомо";
 	}
 
 	private string GetCategoryName(int categoryId)
 	{
-		return Categories.FirstOrDefault(c => c.category_id == categoryId)?.category_name ?? "Unknown";
+		return Categories.FirstOrDefault(c => c.category_id == categoryId)?.category_name ?? "Невідомо";
 	}
 
 	private string GetBrandName(int brandId)
 	{
-		return Brands.FirstOrDefault(b => b.brand_id == brandId)?.brand_name ?? "Unknown";
+		return Brands.FirstOrDefault(b => b.brand_id == brandId)?.brand_name ?? "Невідомо";
 	}
 
 	private string GetTypeName(int typeId)
 	{
-		return Types.FirstOrDefault(t => t.type_id == typeId)?.type_name ?? "Unknown";
+		return Types.FirstOrDefault(t => t.type_id == typeId)?.type_name ?? "Невідомо";
 	}
 
 	private string GetClubName(int clubId)
 	{
-		return Clubs.FirstOrDefault(c => c.club_id == clubId)?.name ?? "Unknown";
+		return Clubs.FirstOrDefault(c => c.club_id == clubId)?.name ?? "Невідомо";
 	}
 
 	private string GetEmployeeName(int employeeId)
 	{
 		var employee = Employees.FirstOrDefault(e => e.employee_id == employeeId);
-		return employee != null ? $"{employee.first_name} {employee.last_name}" : "Unknown";
+		return employee != null ? $"{employee.first_name} {employee.last_name}" : "Невідомо";
 	}
 
 	private int GetEmployeeClubId(int employeeId)
@@ -566,13 +566,13 @@
 			{
 				if (item.EquipmentId <= 0)
 				{
-					Snackbar.Add("Please select equipment for all new items", MudBlazor.Severity.Warning);
+					Snackbar.Add("Будь ласка, виберіть обладнання для всіх нових товарів", MudBlazor.Severity.Warning);
 					return;
 				}
 
 				if (item.Quantity <= 0 || item.Price < 0)
 				{
-					Snackbar.Add("Equipment quantity must be positive and price must be non-negative", MudBlazor.Severity.Warning);
+					Snackbar.Add("Кількість обладнання має бути додатною, а ціна – невід’ємною", MudBlazor.Severity.Warning);
 					return;
 				}
 			}
@@ -581,11 +581,11 @@
 			Order.TotalAmount = Order.SuppliedEquipmentItems.Sum(item => item.Quantity * item.Price);
 
 			await OnSave.InvokeAsync();
-			Snackbar.Add("Order details saved successfully", MudBlazor.Severity.Success);
+			Snackbar.Add("Дані замовлення успішно збережено", MudBlazor.Severity.Success);
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Error saving changes: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add($"Помилка збереження змін", MudBlazor.Severity.Error);
 		}
 	}
 
@@ -593,7 +593,7 @@
 	{
 		if (hasMaxEquipment)
 		{
-			Snackbar.Add("You can add at most 5 new equipment items at once", MudBlazor.Severity.Warning);
+			Snackbar.Add("Ви можете додати максимум 5 нових предметів спорядження одночасно", MudBlazor.Severity.Warning);
 			return;
 		}
 
@@ -634,7 +634,7 @@
 		}
 		else
 		{
-			Snackbar.Add("Please select equipment and specify quantity", MudBlazor.Severity.Warning);
+			Snackbar.Add("Будь ласка, виберіть обладнання та вкажіть кількість", MudBlazor.Severity.Warning);
 		}
 	}
 
@@ -648,7 +648,7 @@
 	{
 		if (IsOrderReadOnly)
 		{
-			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			Snackbar.Add("Замовлення виконано або скасовано і не може бути змінено", MudBlazor.Severity.Warning);
 			return;
 		}
 
@@ -658,11 +658,11 @@
 		if (!item.IsExisting || (item.IsExisting && !placements.Any()))
 		{
 			Order.SuppliedEquipmentItems.Remove(item);
-			Snackbar.Add("Equipment removed successfully", MudBlazor.Severity.Success);
+			Snackbar.Add("Обладнання успішно вилучено", MudBlazor.Severity.Success);
 		}
 		else
 		{
-			Snackbar.Add("Cannot remove equipment that has been placed", MudBlazor.Severity.Error);
+			Snackbar.Add("Не можна знімати обладнання, яке було розміщено", MudBlazor.Severity.Error);
 		}
 	}
 
@@ -680,7 +680,7 @@
 		if (item.Quantity <= 0)
 		{
 			item.Quantity = 1;
-			Snackbar.Add("Quantity must be greater than 0", MudBlazor.Severity.Warning);
+			Snackbar.Add("Кількість має бути більшою за 0", MudBlazor.Severity.Warning);
 		}
 	}
 
@@ -689,7 +689,7 @@
 		if (item.Price <= 0)
 		{
 			item.Price = 0.01m;
-			Snackbar.Add("Price must be greater than 0", MudBlazor.Severity.Warning);
+			Snackbar.Add("Ціна має бути більшою за 0", MudBlazor.Severity.Warning);
 		}
 	}
 
@@ -709,7 +709,7 @@
 	{
 		if (IsOrderReadOnly)
 		{
-			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			Snackbar.Add("Замовлення виконано або скасовано і не може бути змінено", MudBlazor.Severity.Warning);
 			return;
 		}
 
@@ -720,10 +720,10 @@
 		{
 			// Display confirmation dialog without JavaScript
 			var result = await DialogService.ShowMessageBox(
-				"Confirm Delete",
-				$"Are you sure you want to remove {item.EquipmentName} from this order?",
-				yesText: "Yes",
-				noText: "No");
+				"Підтвердження видалення",
+				$"Ви впевнені, що хочете видалити {item.EquipmentName} з цього замовлення?",
+				yesText: "Так",
+				noText: "Ні");
 
 			if (result == true)
 			{
@@ -732,7 +732,7 @@
 		}
 		else
 		{
-			Snackbar.Add("Cannot remove equipment that has been placed", MudBlazor.Severity.Error);
+			Snackbar.Add("Не можна знімати обладнання, яке було розміщено", MudBlazor.Severity.Error);
 		}
 	}
 
@@ -750,13 +750,13 @@
 	{
 		if (IsOrderReadOnly)
 		{
-			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			Snackbar.Add("Замовлення виконано або скасовано і не може бути змінено", MudBlazor.Severity.Warning);
 			return;
 		}
 
 		if (!availableItemsForPlacement.Any())
 		{
-			Snackbar.Add("No equipment items available for placement", MudBlazor.Severity.Warning);
+			Snackbar.Add("Немає обладнання для розміщення", MudBlazor.Severity.Warning);
 			return;
 		}
 
@@ -775,14 +775,14 @@
 	{
 		if (IsOrderReadOnly)
 		{
-			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			Snackbar.Add("Замовлення виконано або скасовано і не може бути змінено", MudBlazor.Severity.Warning);
 			return;
 		}
 
 		var remainingQty = GetRemainingQuantity(item);
 		if (remainingQty <= 0)
 		{
-			Snackbar.Add("No quantity remaining for placement", MudBlazor.Severity.Warning);
+			Snackbar.Add("Немає залишків для розміщення", MudBlazor.Severity.Warning);
 			return;
 		}
 
@@ -831,12 +831,12 @@
 	{
 		if (IsOrderReadOnly)
 		{
-			Snackbar.Add("Order is completed or cancelled and cannot be modified", MudBlazor.Severity.Warning);
+			Snackbar.Add("Замовлення виконано або скасовано і не може бути змінено", MudBlazor.Severity.Warning);
 			return;
 		}
 		if (!IsValidPlacement())
 		{
-			Snackbar.Add("Please fill in all required placement fields", MudBlazor.Severity.Warning);
+			Snackbar.Add("Будь ласка, заповніть усі обов'язкові поля розміщення", MudBlazor.Severity.Warning);
 			return;
 		}
 		try
@@ -846,7 +846,7 @@
 				.FirstOrDefault(se => se.SuppliedEquipmentId == tempNewPlacement.SuppliedEquipmentId);
 			if (suppliedItem == null)
 			{
-				Snackbar.Add("Supplied equipment not found", MudBlazor.Severity.Error);
+				Snackbar.Add("Поставлене обладнання не знайдено", MudBlazor.Severity.Error);
 				return;
 			}
 
@@ -863,7 +863,7 @@
 
 			if (placementExists)
 			{
-				Snackbar.Add("This placement already exists", MudBlazor.Severity.Warning);
+				Snackbar.Add("Це місце розташування вже існує", MudBlazor.Severity.Warning);
 				tempNewPlacement = null;
 				return;
 			}
@@ -919,11 +919,11 @@
 			}
 
 			tempNewPlacement = null;
-			Snackbar.Add("Placement created successfully", MudBlazor.Severity.Success);
+			Snackbar.Add("Розміщення успішно створено", MudBlazor.Severity.Success);
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Error creating placement: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add($"Помилка розміщення обладнання", MudBlazor.Severity.Error);
 		}
 	}
 	private async Task<int> CreateOrGetAvailableEquipment(PlacementViewModel placement)
@@ -1014,10 +1014,10 @@
 		if (equipment != null)
 		{
 			var result = await DialogService.ShowMessageBox(
-				"Confirm Delete",
-				$"Are you sure you want to remove this placement for {equipment.name}?",
-				yesText: "Yes",
-				noText: "No");
+				"Підтвердження видалення",
+				$"Ви впевнені, що хочете видалити це місце розташування для {equipment.name}?",
+				yesText: "Так",
+				noText: "Ні");
 
 			if (result == true)
 			{
@@ -1026,7 +1026,7 @@
 		}
 		else
 		{
-			Snackbar.Add("Equipment not found for this placement.", MudBlazor.Severity.Error);
+			Snackbar.Add("Обладнання для цього розміщення не знайдено.", MudBlazor.Severity.Error);
 		}
 	}
 	private async Task RemovePlacement(ProductPlacement placement)

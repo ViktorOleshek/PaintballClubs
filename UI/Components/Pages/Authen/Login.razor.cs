@@ -57,7 +57,7 @@ public partial class Login : ComponentBase
             return;
         }
 
-        errorMessage = response.Error?.Content ?? response.Error?.Message ?? "Unknown error occurred";
+        errorMessage = response.Error?.Content ?? response.Error?.Message ?? "Сталася невідома помилка";
         Snackbar.Add(errorMessage, Severity.Error);
     }
 

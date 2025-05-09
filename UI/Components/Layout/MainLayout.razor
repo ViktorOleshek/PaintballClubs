@@ -22,7 +22,7 @@
 						   Color=@Color.Primary
 						   Variant=@Variant.Filled
 						   Class="ml-2">
-					Sign In
+					Увійти
 				</MudButton>
 			}
 			else
@@ -33,20 +33,20 @@
 					<ActivatorContent>
 						<div class="d-flex align-center">
 							<MudAvatar Color="Color.Secondary" Class="mr-2">
-								@(employee.first_name?.FirstOrDefault() ?? '?')@(employee.last_name?.FirstOrDefault() ?? '?')
+								@(employee.first_name) @(employee.last_name)
 							</MudAvatar>
 							<div>
 								<MudText Typo="Typo.body1" Color="Color.Tertiary">
 									@(employee.last_name) @(employee.first_name)
 								</MudText>
 								<MudText Typo="Typo.caption" Style="font-style: italic;" Color="Color.Tertiary">
-									@position.position_name
+									@posititonName
 								</MudText>
 							</div>
 						</div>
 					</ActivatorContent>
 					<ChildContent>
-						<MudMenuItem Label="Logout"
+						<MudMenuItem Label="Вийти"
 									 Href="/logout" />
 					</ChildContent>
 				</MudMenu>
@@ -60,8 +60,8 @@
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-	An unhandled error has occurred.
-	<a href="." class="reload">Reload</a>
+	Сталася необроблена помилка.
+	<a href="." class="reload">Перезавантажити</a>
 	<span class="dismiss">🗙</span>
 </div>
 
@@ -79,9 +79,10 @@
 
 @code {
 	private bool isAuthenticated;
-	private User user = new();
+	// private User user = new();
 	private Employee employee = new();
-	private Domain.Entities.Position position = new();
+	// private Domain.Entities.Position position = new();
+	private string? posititonName;
 
 	[Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
 	[Inject] private IApiFacade ApiFacade { get; set; } = default!;
@@ -102,39 +103,47 @@
 			return;
 		}
 
-		var userId = await customProvider.LoadUserIdFromToken();
-		if (userId is null)
+		var employee_id = await customProvider.LoadUserIdFromToken();
+		if (employee_id is null)
 		{
 			Snackbar.Add("User ID not found in token.", Severity.Error);
 			return;
 		}
 
-		await LoadUser(userId.Value);
-	}
-	private async Task LoadUser(int userId)
-	{
-		var userResponse = await ApiFacade.AdminApiService.Get(userId);
-		if (!userResponse.IsSuccessStatusCode)
-		{
-			Snackbar.Add("Failed to load user.", Severity.Error);
-			return;
-		}
-		user = userResponse.Content;
-
-		var employeeResponse = await ApiFacade.EmployeeApiService.Get(user.employee_id);
+		var employeeResponse = await ApiFacade.EmployeeApiService.Get((int)employee_id);
 		if (!employeeResponse.IsSuccessStatusCode)
 		{
 			Snackbar.Add("Failed to load employee.", Severity.Error);
 			return;
 		}
 		employee = employeeResponse.Content;
-
-		var positionResponse = await ApiFacade.PositionApiService.Get(employee.position_id);
-		if (!positionResponse.IsSuccessStatusCode)
-		{
-			Snackbar.Add("Failed to load position.", Severity.Error);
-			return;
-		}
-		position = positionResponse.Content;
+		posititonName = await customProvider.LoadUserRoleFromToken();
+		// await LoadUser(userId.Value);
 	}
+	// private async Task LoadUser(int userId)
+	// {
+	// 	var userResponse = await ApiFacade.AdminApiService.Get(userId);
+	// 	if (!userResponse.IsSuccessStatusCode)
+	// 	{
+	// 		Snackbar.Add("Failed to load user.", Severity.Error);
+	// 		return;
+	// 	}
+	// 	user = userResponse.Content;
+
+	// 	var employeeResponse = await ApiFacade.EmployeeApiService.Get(user.employee_id);
+	// 	if (!employeeResponse.IsSuccessStatusCode)
+	// 	{
+	// 		Snackbar.Add("Failed to load employee.", Severity.Error);
+	// 		return;
+	// 	}
+	// 	employee = employeeResponse.Content;
+
+	// 	var positionResponse = await ApiFacade.PositionApiService.Get(employee.position_id);
+	// 	if (!positionResponse.IsSuccessStatusCode)
+	// 	{
+	// 		Snackbar.Add("Failed to load position.", Severity.Error);
+	// 		return;
+	// 	}
+	// 	position = positionResponse.Content;
+		// }
 }

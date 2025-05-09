@@ -7,7 +7,7 @@
 		<MudText Typo=@Typo.h4
 				 Align=@Align.Center
 				 Class="mb-4">
-			Sign in
+			Увійти
 		</MudText>
 
 		<EditForm Model="@loginModel"
@@ -15,7 +15,7 @@
 			<MudForm Model="@loginModel"
 					 @ref="loginForm">
 				<DataAnnotationsValidator />
-				<MudTextField Label="Login"
+				<MudTextField Label="Логін"
 							  @bind-Value="@loginModel.login"
 							  For="@(() => loginModel.login)"
 							  Variant="@Variant.Outlined"
@@ -23,7 +23,7 @@
 							  FullWidth="true"
 							  Required="true" />
 
-				<MudTextField Label="Password"
+				<MudTextField Label="Пароль"
 							  @bind-Value="@loginModel.password"
 							  For="@(() => loginModel.password)"
 							  Variant="@Variant.Outlined"
@@ -46,7 +46,7 @@
 					}
 					else
 					{
-						<text>Sign in</text>
+						<text>Увійти</text>
 					}
 				</MudButton>
 
@@ -58,7 +58,7 @@
 						   OnClick="@(() => HandleExternalLogin(ExternalLoginConstants.Google))"
 						   Class="mb-3"
 						   StartIcon="@Icons.Custom.Brands.Google">
-					Sign in with Google
+					Увійти через Google
 				</MudButton>
 
 				<MudButton FullWidth="true"
@@ -69,7 +69,7 @@
 						   OnClick="@(() => HandleExternalLogin(ExternalLoginConstants.Microsoft))"
 						   Class="mb-3"
 						   StartIcon="@Icons.Custom.Brands.Microsoft">
-					Sign in with Microsoft
+					Увійти через Microsoft
 				</MudButton>
 			</MudForm>
 		</EditForm>

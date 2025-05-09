@@ -5,47 +5,42 @@
 <MudGrid>
 	<MudItem xs="12" sm="6" md="3">
 		<MudTextField @bind-Value="SearchQuery"
-					  Label="Search"
+					  Label="Пошук"
 					  Icon="@Icons.Material.Filled.Search"
-					  Immediate="true"/>
+					  Immediate="true" />
 	</MudItem>
-
 	<MudItem xs="12" sm="6" md="3">
-		<MudSelect T="int" @bind-Value="StatusFilter" Label="Status">
-			<MudSelectItem T="int" Value="0">All</MudSelectItem>
+		<MudSelect T="int" @bind-Value="StatusFilter" Label="Статус">
+			<MudSelectItem T="int" Value="0">Усі</MudSelectItem>
 			@foreach (var status in Statuses)
 			{
 				<MudSelectItem T="int" Value="@status.status_id">@status.status_name</MudSelectItem>
 			}
 		</MudSelect>
 	</MudItem>
-
 	<MudItem xs="12" sm="6" md="3">
-		<MudSelect T="int" @bind-Value="SupplierFilter" Label="Supplier">
-			<MudSelectItem T="int" Value="0">All</MudSelectItem>
+		<MudSelect T="int" @bind-Value="SupplierFilter" Label="Постачальник">
+			<MudSelectItem T="int" Value="0">Усі</MudSelectItem>
 			@foreach (var supplier in Suppliers)
 			{
 				<MudSelectItem T="int" Value="@supplier.supplier_id">@supplier.name</MudSelectItem>
 			}
 		</MudSelect>
 	</MudItem>
-
 	<MudItem xs="12" sm="6" md="3">
-		<MudSelect T="int" @bind-Value="EmployeeFilter" Label="Employee">
-			<MudSelectItem T="int" Value="0">All</MudSelectItem>
+		<MudSelect T="int" @bind-Value="EmployeeFilter" Label="Співробітник">
+			<MudSelectItem T="int" Value="0">Усі</MudSelectItem>
 			@foreach (var employee in Employees)
 			{
 				<MudSelectItem T="int" Value="@employee.employee_id">@employee.first_name @employee.last_name</MudSelectItem>
 			}
 		</MudSelect>
 	</MudItem>
-
 	<MudItem xs="12" sm="6" md="3">
-		<MudDatePicker @bind-Date="DateFromFilter" Label="From Date" />
+		<MudDatePicker @bind-Date="DateFromFilter" Label="Дата з" />
 	</MudItem>
-
 	<MudItem xs="12" sm="6" md="3">
-		<MudDatePicker @bind-Date="DateToFilter" Label="To Date" />
+		<MudDatePicker @bind-Date="DateToFilter" Label="Дата по" />
 	</MudItem>
 </MudGrid>
 

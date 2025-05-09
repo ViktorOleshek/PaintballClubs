@@ -1,347 +1,359 @@
 ﻿@page "/employees"
+@using Domain.Constants
 @using Domain.Entities
+@using Microsoft.AspNetCore.Components.Authorization
 @using UI.Components.Pages.SupplyOrders.Component
 @using Services.ExternalApi.Facade
 @using System.ComponentModel.DataAnnotations
+
 @inject IApiFacade ApiFacade
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject MudBlazor.ISnackbar Snackbar
 
-<h3>Список працівників</h3>
+<AuthorizeView Policy=@Roles.GlobalAdmin>
+	<Authorized Context="authContext">
 
-<div class="card mb-3">
-	<div class="card-header">
-		<div class="d-flex justify-content-between align-items-center mb-2">
-			<h5 class="mb-0">
-				<span style="cursor: pointer;" @onclick="ToggleFilters">
-					Фільтри
-					<i class="bi @(showFilters ? "bi-chevron-up" : "bi-chevron-down")"></i>
-				</span>
-			</h5>
-			<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
-				<i class="bi bi-plus-circle"></i> Додати працівника
-			</button>
-		</div>
+		<h3>Список працівників</h3>
 
-		@if (showFilters)
-		{
-			<div class="row g-2">
-				<div class="col-md-2">
-					<div class="input-group input-group-sm">
-						<span class="input-group-text">Ім'я</span>
-						<input type="text" class="form-control" @bind="firstNameFilter" @bind:event="oninput"
-							   placeholder="Фільтр за ім'ям">
-					</div>
+		<div class="card mb-3">
+			<div class="card-header">
+				<div class="d-flex justify-content-between align-items-center mb-2">
+					<h5 class="mb-0">
+						<span style="cursor: pointer;" @onclick="ToggleFilters">
+							Фільтри
+							<i class="bi @(showFilters ? "bi-chevron-up" : "bi-chevron-down")"></i>
+						</span>
+					</h5>
+					<button class="btn btn-success btn-sm" @onclick="ToggleAddNewForm">
+						<i class="bi bi-plus-circle"></i> Додати працівника
+					</button>
 				</div>
-				<div class="col-md-2">
-					<div class="input-group input-group-sm">
-						<span class="input-group-text">Прізвище</span>
-						<input type="text" class="form-control" @bind="lastNameFilter" @bind:event="oninput"
-							   placeholder="Фільтр за прізвищем">
-					</div>
-				</div>
-				<div class="col-md-2">
-					<div class="input-group input-group-sm">
-						<span class="input-group-text">Логін</span>
-						<input type="text" class="form-control" @bind="loginFilter" @bind:event="oninput"
-							   placeholder="Фільтр за логіном">
-					</div>
-				</div>
-				<div class="col-md-2">
-					<div class="input-group input-group-sm">
-						<span class="input-group-text">Посада</span>
-						<input type="text" class="form-control" @bind="positionFilter" @bind:event="oninput"
-							   placeholder="Фільтр за посадою">
-					</div>
-				</div>
-				<div class="col-md-2">
-					<div class="input-group input-group-sm">
-						<span class="input-group-text">Клуб</span>
-						<input type="text" class="form-control" @bind="clubFilter" @bind:event="oninput"
-							   placeholder="Фільтр за клубом">
-					</div>
-				</div>
-			</div>
-		}
-	</div>
-</div>
-@if (showAddNewForm)
-{
-	<div class="card mb-3">
-		<div class="card-header d-flex justify-content-between">
-			<span>Додати нового працівника</span>
-			<button type="button" class="btn-close" @onclick="ToggleAddNewForm"></button>
-		</div>
-		<div class="card-body">
-			<EditForm Model="newEmployee" OnValidSubmit="AddNewEmployee" Context="formContext">
-				<DataAnnotationsValidator />
 
-				<div class="row g-2">
-					<div class="col-md-4">
-						<label class="form-label">Ім'я</label>
-						<InputText class="form-control form-control-sm" @bind-Value="newEmployee.first_name" />
-						<ValidationMessage For="@(() => newEmployee.first_name)" class="text-danger small" />
-					</div>
-					<div class="col-md-4">
-						<label class="form-label">Прізвище</label>
-						<InputText class="form-control form-control-sm" @bind-Value="newEmployee.last_name" />
-						<ValidationMessage For="@(() => newEmployee.last_name)" class="text-danger small" />
-					</div>
-					<div class="col-md-4">
-						<label class="form-label">Логін</label>
-						<InputText class="form-control form-control-sm" @bind-Value="newEmployee.login" />
-						<ValidationMessage For="@(() => newEmployee.login)" class="text-danger small" />
-					</div>
-					<div class="col-md-4">
-						<label class="form-label">Пароль</label>
-						<InputText type="password" class="form-control form-control-sm" @bind-Value="newEmployee.password" />
-						<ValidationMessage For="@(() => newEmployee.password)" class="text-danger small" />
-					</div>
-					<div class="col-md-4">
-						<label class="form-label">Посада</label>
-						<InputSelect class="form-select form-select-sm" @bind-Value="newEmployee.position_id">
-							@foreach (var position in positions)
-							{
-								<option value="@position.position_id">@position.position_name</option>
-							}
-						</InputSelect>
-						<ValidationMessage For="@(() => newEmployee.position_id)" class="text-danger small" />
-					</div>
-					<div class="col-md-4">
-						<label class="form-label">Клуб</label>
-						<InputSelect class="form-select form-select-sm" @bind-Value="newEmployee.club_id">
-							@foreach (var club in clubs)
-							{
-								<option value="@club.club_id">@club.name</option>
-							}
-						</InputSelect>
-						<ValidationMessage For="@(() => newEmployee.club_id)" class="text-danger small" />
-					</div>
-					<div class="col-12">
-						<div class="d-flex justify-content-end gap-2">
-							<button type="button" class="btn btn-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
-							<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+				@if (showFilters)
+				{
+					<div class="row g-2">
+						<div class="col-md-2">
+							<div class="input-group input-group-sm">
+								<span class="input-group-text">Ім'я</span>
+								<input type="text" class="form-control" @bind="firstNameFilter" @bind:event="oninput"
+									   placeholder="Фільтр за ім'ям">
+							</div>
+						</div>
+						<div class="col-md-2">
+							<div class="input-group input-group-sm">
+								<span class="input-group-text">Прізвище</span>
+								<input type="text" class="form-control" @bind="lastNameFilter" @bind:event="oninput"
+									   placeholder="Фільтр за прізвищем">
+							</div>
+						</div>
+						<div class="col-md-2">
+							<div class="input-group input-group-sm">
+								<span class="input-group-text">Логін</span>
+								<input type="text" class="form-control" @bind="loginFilter" @bind:event="oninput"
+									   placeholder="Фільтр за логіном">
+							</div>
+						</div>
+						<div class="col-md-2">
+							<div class="input-group input-group-sm">
+								<span class="input-group-text">Посада</span>
+								<input type="text" class="form-control" @bind="positionFilter" @bind:event="oninput"
+									   placeholder="Фільтр за посадою">
+							</div>
+						</div>
+						<div class="col-md-2">
+							<div class="input-group input-group-sm">
+								<span class="input-group-text">Клуб</span>
+								<input type="text" class="form-control" @bind="clubFilter" @bind:event="oninput"
+									   placeholder="Фільтр за клубом">
+							</div>
 						</div>
 					</div>
-				</div>
-			</EditForm>
+				}
+			</div>
 		</div>
-	</div>
-}
+		@if (showAddNewForm)
+		{
+			<div class="card mb-3">
+				<div class="card-header d-flex justify-content-between">
+					<span>Додати нового працівника</span>
+					<button type="button" class="btn-close" @onclick="ToggleAddNewForm"></button>
+				</div>
+				<div class="card-body">
+					<EditForm Model="newEmployee" OnValidSubmit="AddNewEmployee" Context="formContext">
+						<DataAnnotationsValidator />
 
-<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-	<table class="table table-striped table-hover table-sm table-bordered">
-		<thead class="sticky-top">
-			<tr>
-				<th @onclick='() => SortData("firstName")' style="cursor: pointer;">
-					Ім'я
-					@if (currentSortColumn == "firstName")
-					{
-						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
-					}
-				</th>
-				<th @onclick='() => SortData("lastName")' style="cursor: pointer;">
-					Прізвище
-					@if (currentSortColumn == "lastName")
-					{
-						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
-					}
-				</th>
-				<th @onclick='() => SortData("login")' style="cursor: pointer;">
-					Логін
-					@if (currentSortColumn == "login")
-					{
-						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
-					}
-				</th>
-				<th @onclick='() => SortData("password")' style="cursor: pointer;">
-					Пароль
-					@if (currentSortColumn == "password")
-					{
-						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
-					}
-				</th>
-				<th @onclick='() => SortData("position")' style="cursor: pointer;">
-					Посада
-					@if (currentSortColumn == "position")
-					{
-						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
-					}
-				</th>
-				<th @onclick='() => SortData("club")' style="cursor: pointer;">
-					Клуб
-					@if (currentSortColumn == "club")
-					{
-						<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
-					}
-				</th>
-				<th>Дії</th>
-			</tr>
-		</thead>
-		<tbody>
-			@foreach (var employee in PaginatedEmployees)
-			{
-				<tr>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
-								<DataAnnotationsValidator />
-								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.first_name" />
-								<ValidationMessage For="@(() => editingEmployee.first_name)" class="text-danger small" />
-							</EditForm>
-						}
-						else
-						{
-							@employee.first_name
-						}
-					</td>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
-								<DataAnnotationsValidator />
-								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.last_name" />
-								<ValidationMessage For="@(() => editingEmployee.last_name)" class="text-danger small" />
-							</EditForm>
-						}
-						else
-						{
-							@employee.last_name
-						}
-					</td>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
-								<DataAnnotationsValidator />
-								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.login" />
-								<ValidationMessage For="@(() => editingEmployee.login)" class="text-danger small" />
-							</EditForm>
-						}
-						else
-						{
-							@employee.login
-						}
-					</td>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
-								<DataAnnotationsValidator />
-								<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.password" />
-								<ValidationMessage For="@(() => editingEmployee.password)" class="text-danger small" />
-							</EditForm>
-						}
-						else
-						{
-							@employee.password
-						}
-					</td>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
-								<DataAnnotationsValidator />
-								<InputSelect class="form-select form-select-sm" @bind-Value="editingEmployee.position_id">
+						<div class="row g-2">
+							<div class="col-md-4">
+								<label class="form-label">Ім'я</label>
+								<InputText class="form-control form-control-sm" @bind-Value="newEmployee.first_name" />
+								<ValidationMessage For="@(() => newEmployee.first_name)" class="text-danger small" />
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Прізвище</label>
+								<InputText class="form-control form-control-sm" @bind-Value="newEmployee.last_name" />
+								<ValidationMessage For="@(() => newEmployee.last_name)" class="text-danger small" />
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Логін</label>
+								<InputText class="form-control form-control-sm" @bind-Value="newEmployee.login" />
+								<ValidationMessage For="@(() => newEmployee.login)" class="text-danger small" />
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Пароль</label>
+								<InputText type="password" class="form-control form-control-sm" @bind-Value="newEmployee.password" />
+								<ValidationMessage For="@(() => newEmployee.password)" class="text-danger small" />
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Посада</label>
+								<InputSelect class="form-select form-select-sm" @bind-Value="newEmployee.position_id">
 									@foreach (var position in positions)
 									{
 										<option value="@position.position_id">@position.position_name</option>
 									}
 								</InputSelect>
-								<ValidationMessage For="@(() => editingEmployee.position_id)" class="text-danger small" />
-							</EditForm>
-						}
-						else
-						{
-							@GetPositionName(employee.position_id)
-						}
-					</td>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
-								<DataAnnotationsValidator />
-								<InputSelect class="form-select form-select-sm" @bind-Value="editingEmployee.club_id">
+								<ValidationMessage For="@(() => newEmployee.position_id)" class="text-danger small" />
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Клуб</label>
+								<InputSelect class="form-select form-select-sm" @bind-Value="newEmployee.club_id">
 									@foreach (var club in clubs)
 									{
 										<option value="@club.club_id">@club.name</option>
 									}
 								</InputSelect>
-								<ValidationMessage For="@(() => editingEmployee.club_id)" class="text-danger small" />
-							</EditForm>
-						}
-						else
-						{
-							@GetClubName(employee.club_id)
-						}
-					</td>
-					<td>
-						@if (editingEmployee?.employee_id == employee.employee_id)
-						{
-							<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee">
-								<DataAnnotationsValidator />
-								<div class="btn-group btn-group-sm">
-									<button class="btn btn-success btn-sm" type="submit">
-										<i class="bi bi-check"></i> Зберегти
-									</button>
-									<button class="btn btn-secondary btn-sm" type="button" @onclick="CancelEditing">
-										<i class="bi bi-x"></i> Скасувати
-									</button>
-								</div>
-							</EditForm>
-						}
-						else
-						{
-							<div class="btn-group btn-group-sm">
-								<button class="btn btn-primary btn-sm" @onclick="() => EditEmployee(employee)">
-									<i class="bi bi-pencil"></i>
-								</button>
-								<button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(employee)">
-									<i class="bi bi-trash"></i>
-								</button>
+								<ValidationMessage For="@(() => newEmployee.club_id)" class="text-danger small" />
 							</div>
-						}
-					</td>
-				</tr>
-			}
-		</tbody>
-	</table>
-</div>
-
-@if (employees.Count == 0)
-{
-	<div class="alert alert-info">Працівників не знайдено.</div>
-}
-
-<PaginationControl CurrentPage="currentPage"
-				   PageSize="pageSize"
-				   TotalItems="FilteredEmployees.Count()"
-				   TotalPages="TotalPages"
-				   OnPageChanged="GoToPage"
-				   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
-
-@if (showDeleteConfirmation)
-{
-	<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title">Підтвердження видалення</h5>
-					<button type="button" class="btn-close" @onclick="CancelDelete"></button>
-				</div>
-				<div class="modal-body">
-					<p>Ви впевнені, що хочете видалити працівника "@(employeeToDelete?.first_name) @(employeeToDelete?.last_name)"?</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" @onclick="CancelDelete">Скасувати</button>
-					<button type="button" class="btn btn-danger" @onclick="DeleteEmployee">Видалити</button>
+							<div class="col-12">
+								<div class="d-flex justify-content-end gap-2">
+									<button type="button" class="btn btn-secondary btn-sm" @onclick="ToggleAddNewForm">Скасувати</button>
+									<button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+								</div>
+							</div>
+						</div>
+					</EditForm>
 				</div>
 			</div>
+		}
+
+		<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+			<table class="table table-striped table-hover table-sm table-bordered">
+				<thead class="sticky-top">
+					<tr>
+						<th @onclick='() => SortData("firstName")' style="cursor: pointer;">
+							Ім'я
+							@if (currentSortColumn == "firstName")
+							{
+								<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+							}
+						</th>
+						<th @onclick='() => SortData("lastName")' style="cursor: pointer;">
+							Прізвище
+							@if (currentSortColumn == "lastName")
+							{
+								<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+							}
+						</th>
+						<th @onclick='() => SortData("login")' style="cursor: pointer;">
+							Логін
+							@if (currentSortColumn == "login")
+							{
+								<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+							}
+						</th>
+						<th @onclick='() => SortData("password")' style="cursor: pointer;">
+							Пароль
+							@if (currentSortColumn == "password")
+							{
+								<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+							}
+						</th>
+						<th @onclick='() => SortData("position")' style="cursor: pointer;">
+							Посада
+							@if (currentSortColumn == "position")
+							{
+								<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+							}
+						</th>
+						<th @onclick='() => SortData("club")' style="cursor: pointer;">
+							Клуб
+							@if (currentSortColumn == "club")
+							{
+								<i class="bi @(sortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up")"></i>
+							}
+						</th>
+						<th>Дії</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var employee in PaginatedEmployees)
+					{
+						<tr>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+										<DataAnnotationsValidator />
+										<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.first_name" />
+										<ValidationMessage For="@(() => editingEmployee.first_name)" class="text-danger small" />
+									</EditForm>
+								}
+								else
+								{
+									@employee.first_name
+								}
+							</td>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+										<DataAnnotationsValidator />
+										<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.last_name" />
+										<ValidationMessage For="@(() => editingEmployee.last_name)" class="text-danger small" />
+									</EditForm>
+								}
+								else
+								{
+									@employee.last_name
+								}
+							</td>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+										<DataAnnotationsValidator />
+										<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.login" />
+										<ValidationMessage For="@(() => editingEmployee.login)" class="text-danger small" />
+									</EditForm>
+								}
+								else
+								{
+									@employee.login
+								}
+							</td>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+										<DataAnnotationsValidator />
+										<InputText class="form-control form-control-sm" @bind-Value="editingEmployee.password" />
+										<ValidationMessage For="@(() => editingEmployee.password)" class="text-danger small" />
+									</EditForm>
+								}
+								else
+								{
+									@employee.password
+								}
+							</td>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+										<DataAnnotationsValidator />
+										<InputSelect class="form-select form-select-sm" @bind-Value="editingEmployee.position_id">
+											@foreach (var position in positions)
+											{
+												<option value="@position.position_id">@position.position_name</option>
+											}
+										</InputSelect>
+										<ValidationMessage For="@(() => editingEmployee.position_id)" class="text-danger small" />
+									</EditForm>
+								}
+								else
+								{
+									@GetPositionName(employee.position_id)
+								}
+							</td>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee" Context="formContext">
+										<DataAnnotationsValidator />
+										<InputSelect class="form-select form-select-sm" @bind-Value="editingEmployee.club_id">
+											@foreach (var club in clubs)
+											{
+												<option value="@club.club_id">@club.name</option>
+											}
+										</InputSelect>
+										<ValidationMessage For="@(() => editingEmployee.club_id)" class="text-danger small" />
+									</EditForm>
+								}
+								else
+								{
+									@GetClubName(employee.club_id)
+								}
+							</td>
+							<td>
+								@if (editingEmployee?.employee_id == employee.employee_id)
+								{
+									<EditForm Model="editingEmployee" OnValidSubmit="SaveEmployee">
+										<DataAnnotationsValidator />
+										<div class="btn-group btn-group-sm">
+											<button class="btn btn-success btn-sm" type="submit">
+												<i class="bi bi-check"></i> Зберегти
+											</button>
+											<button class="btn btn-secondary btn-sm" type="button" @onclick="CancelEditing">
+												<i class="bi bi-x"></i> Скасувати
+											</button>
+										</div>
+									</EditForm>
+								}
+								else
+								{
+									<div class="btn-group btn-group-sm">
+										<button class="btn btn-primary btn-sm" @onclick="() => EditEmployee(employee)">
+											<i class="bi bi-pencil"></i>
+										</button>
+										<button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(employee)">
+											<i class="bi bi-trash"></i>
+										</button>
+									</div>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
 		</div>
-	</div>
-}
+
+		@if (employees.Count == 0)
+		{
+			<div class="alert alert-info">Працівників не знайдено.</div>
+		}
+
+		<PaginationControl CurrentPage="currentPage"
+						   PageSize="pageSize"
+						   TotalItems="FilteredEmployees.Count()"
+						   TotalPages="TotalPages"
+						   OnPageChanged="GoToPage"
+						   OnPageSizeChanged="(size) => { pageSize = size; currentPage = 1; }" />
+
+		@if (showDeleteConfirmation)
+		{
+			<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+				<div class="modal-dialog modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title">Підтвердження видалення</h5>
+							<button type="button" class="btn-close" @onclick="CancelDelete"></button>
+						</div>
+						<div class="modal-body">
+							<p>Ви впевнені, що хочете видалити працівника "@(employeeToDelete?.first_name) @(employeeToDelete?.last_name)"?</p>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" @onclick="CancelDelete">Скасувати</button>
+							<button type="button" class="btn btn-danger" @onclick="DeleteEmployee">Видалити</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+
+	</Authorized>
+	<NotAuthorized>
+		<p>Ця функція доступна тільки для адміністраторів системи.</p>
+	</NotAuthorized>
+</AuthorizeView>
 
 @code {
 	// Pagination parameters

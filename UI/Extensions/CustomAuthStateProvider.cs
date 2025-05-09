@@ -21,6 +21,20 @@ public class CustomAuthStateProvider
         var token = _httpContextAccessor.HttpContext?.Request.Cookies [AuthTokenKey];
         return Task.FromResult(token);
     }
+    public async Task<string?> LoadUserRoleFromToken()
+    {
+        var authState = await GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var roleClaim = user.FindFirst(ClaimTypes.Role);
+            if (roleClaim != null)
+            {
+                return roleClaim.Value;
+            }
+        }
+        return null;
+    }
 
     public async Task<int?> LoadUserIdFromToken()
     {
