@@ -54,19 +54,38 @@
 									   placeholder="Фільтр за логіном">
 							</div>
 						</div>
-						<div class="col-md-2">
+						<div class="col-md-3 col-lg-2">
 							<div class="input-group input-group-sm">
 								<span class="input-group-text">Посада</span>
-								<input type="text" class="form-control" @bind="positionFilter" @bind:event="oninput"
+								<input list="positionsList" type="text" class="form-control" @bind="positionFilter" @bind:event="oninput"
 									   placeholder="Фільтр за посадою">
+								<datalist id="positionsList">
+									@foreach (var position in positions)
+									{
+										<option value="@position.position_name"></option>
+									}
+								</datalist>
 							</div>
 						</div>
-						<div class="col-md-2">
+
+						<div class="col-md-3 col-lg-2">
 							<div class="input-group input-group-sm">
 								<span class="input-group-text">Клуб</span>
-								<input type="text" class="form-control" @bind="clubFilter" @bind:event="oninput"
+								<input list="clubsList" type="text" class="form-control" @bind="clubFilter" @bind:event="oninput"
 									   placeholder="Фільтр за клубом">
+								<datalist id="clubsList">
+									@foreach (var club in clubs)
+									{
+										<option value="@club.name"></option>
+									}
+								</datalist>
 							</div>
+						</div>
+
+						<div class="col-md-3 col-lg-2">
+							<button class="btn btn-outline-secondary btn-sm w-100" @onclick="ClearFilters">
+								Очистити фільтри
+							</button>
 						</div>
 					</div>
 				}
@@ -387,6 +406,15 @@
 		showFilters = !showFilters;
 	}
 
+	private void ClearFilters()
+	{
+		firstNameFilter = "";
+		lastNameFilter = "";
+		loginFilter = "";
+		positionFilter = "";
+		clubFilter = "";
+	}
+
 	private IEnumerable<Employee> FilteredEmployees
 	{
 		get
@@ -453,7 +481,7 @@
 			var employeesResponse = await ApiFacade.EmployeeApiService.Get();
 			if (!employeesResponse.IsSuccessStatusCode)
 			{
-				Snackbar.Add("Не вдалося завантажити дані працівників. Оновіть сторінку.", MudBlazor.Severity.Error);
+				Snackbar.Add("Не вдалося завантажити список працівників. Спробуйте оновити сторінку або перевірити з’єднання з сервером.", MudBlazor.Severity.Error);
 				return;
 			}
 			employees = employeesResponse.Content.ToList();
@@ -471,14 +499,14 @@
 			var clubsResponse = await ApiFacade.ClubApiService.Get();
 			if (!clubsResponse.IsSuccessStatusCode)
 			{
-				Snackbar.Add("Не вдалося завантажити дані клубів.", MudBlazor.Severity.Warning);
+				Snackbar.Add("Не вдалося завантажити інформацію про клуби. Перевірте підключення або спробуйте пізніше.", MudBlazor.Severity.Warning);
 				return;
 			}
 			clubs = clubsResponse.Content.ToList();
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Помилка завантаження даних: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add("Сталася непередбачена помилка під час завантаження даних. Спробуйте пізніше.", MudBlazor.Severity.Error);
 		}
 	}
 
@@ -549,7 +577,6 @@
 			var response = await ApiFacade.EmployeeApiService.Update(editingEmployee.employee_id, editingEmployee);
 			if (response.IsSuccessStatusCode)
 			{
-				// Update the local list
 				var index = employees.FindIndex(e => e.employee_id == editingEmployee.employee_id);
 				if (index >= 0)
 				{
@@ -560,12 +587,12 @@
 			}
 			else
 			{
-				Snackbar.Add($"Не вдалось оновити працівника: {response.Error}", MudBlazor.Severity.Error);
+				Snackbar.Add("Не вдалося оновити працівника. Перевірте правильність введених даних або повторіть спробу пізніше.", MudBlazor.Severity.Error);
 			}
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Помилка оновлення працівника: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add($"Помилка оновлення працівника", MudBlazor.Severity.Error);
 		}
 	}
 
@@ -594,12 +621,12 @@
 			}
 			else
 			{
-				Snackbar.Add($"Не вдалось видалити працівника: {response.Error}", MudBlazor.Severity.Error);
+				Snackbar.Add("Не вдалося видалити працівника. Можливо, він задіяний у пов’язаних даних, наприклад, у матчах або замовленнях.", MudBlazor.Severity.Error);
 			}
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Помилка видалення працівника: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add("Помилка під час видалення. Оскільки працівник використовується в пов'язаних записах (наприклад, у грі або замовленні).", MudBlazor.Severity.Error);
 		}
 		finally
 		{
@@ -629,7 +656,7 @@
 	{
 		if (!editContext.Validate())
 		{
-			Snackbar.Add("Будь ласка, виправте помилки валідації", MudBlazor.Severity.Warning);
+			Snackbar.Add("Будь ласка, перевірте правильність заповнення форми — деякі поля містять помилки.", MudBlazor.Severity.Warning);
 			return;
 		}
 
@@ -641,17 +668,17 @@
 			{
 				// Add the new employee to the list
 				employees.Add(response.Content);
-				Snackbar.Add("Працівника успішно додано", MudBlazor.Severity.Success);
+				Snackbar.Add($"Працівника {newEmployee.first_name} {newEmployee.last_name} успішно додано", MudBlazor.Severity.Success);
 				showAddNewForm = false;
 			}
 			else
 			{
-				Snackbar.Add($"Не вдалось додати працівника: {response.Error}", MudBlazor.Severity.Error);
+				Snackbar.Add($"Не вдалось додати працівника.", MudBlazor.Severity.Error);
 			}
 		}
 		catch (Exception ex)
 		{
-			Snackbar.Add($"Помилка додавання працівника: {ex.Message}", MudBlazor.Severity.Error);
+			Snackbar.Add("Сталася непередбачена помилка під час додавання працівника. Спробуйте ще раз пізніше.", MudBlazor.Severity.Error);
 		}
 	}
 }

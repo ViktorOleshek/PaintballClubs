@@ -88,12 +88,6 @@
 					</div>
 				</div>
 				<div class="col-md-3 col-lg-2">
-					<div class="input-group input-group-sm">
-						<span class="input-group-text">Дата</span>
-						<input type="date" class="form-control" @bind="dateFilter" @bind:format="yyyy-MM-dd">
-					</div>
-				</div>
-				<div class="col-md-3 col-lg-2">
 					<button class="btn btn-outline-secondary btn-sm w-100" @onclick="ClearFilters">
 						Очистити фільтри
 					</button>
@@ -390,7 +384,7 @@
 						}
 						@if (!string.IsNullOrEmpty(equipment.description))
 						{
-							<p class="card-text fs-6 mb-1 text-truncate" title="@equipment.description">@equipment.description</p>
+							<p class="card-text fs-6 mb-1 text-truncate" title="@equipment.description"><strong>Опис:</strong> @equipment.description</p>
 						}
 
 						@if (equipmentCounts.ContainsKey(equipment.equipment_id))
@@ -494,7 +488,6 @@ else if (FilteredEquipments.Count() == 0)
 	private int brandFilter = 0;
 	private int categoryFilter = 0;
 	private int typeFilter = 0;
-	private DateTime? dateFilter = null;
 	private bool showFilters = true;
 
 	private List<Equipment> equipments = new();
@@ -548,9 +541,7 @@ else if (FilteredEquipments.Count() == 0)
 					(e.description != null && e.description.Contains(descriptionFilter, StringComparison.OrdinalIgnoreCase))) &&
 				(brandFilter == 0 || e.brand_id == brandFilter) &&
 				(categoryFilter == 0 || e.category_id == categoryFilter) &&
-				(typeFilter == 0 || e.type_id == typeFilter) &&
-				(!dateFilter.HasValue ||
-					(e.CreateDatetime.HasValue && e.CreateDatetime.Value.Date == dateFilter.Value.Date))
+				(typeFilter == 0 || e.type_id == typeFilter)
 			).ToList();
 
 			// Якщо сортування не вибране або скинуте
@@ -860,7 +851,6 @@ else if (FilteredEquipments.Count() == 0)
 		brandFilter = 0;
 		categoryFilter = 0;
 		typeFilter = 0;
-		dateFilter = null;
 	}
 
 	private async Task AddNewEquipment()

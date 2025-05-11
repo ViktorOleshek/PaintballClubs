@@ -79,9 +79,7 @@
 
 @code {
 	private bool isAuthenticated;
-	// private User user = new();
 	private Employee employee = new();
-	// private Domain.Entities.Position position = new();
 	private string? posititonName;
 
 	[Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
@@ -118,32 +116,5 @@
 		}
 		employee = employeeResponse.Content;
 		posititonName = await customProvider.LoadUserRoleFromToken();
-		// await LoadUser(userId.Value);
 	}
-	// private async Task LoadUser(int userId)
-	// {
-	// 	var userResponse = await ApiFacade.AdminApiService.Get(userId);
-	// 	if (!userResponse.IsSuccessStatusCode)
-	// 	{
-	// 		Snackbar.Add("Failed to load user.", Severity.Error);
-	// 		return;
-	// 	}
-	// 	user = userResponse.Content;
-
-	// 	var employeeResponse = await ApiFacade.EmployeeApiService.Get(user.employee_id);
-	// 	if (!employeeResponse.IsSuccessStatusCode)
-	// 	{
-	// 		Snackbar.Add("Failed to load employee.", Severity.Error);
-	// 		return;
-	// 	}
-	// 	employee = employeeResponse.Content;
-
-	// 	var positionResponse = await ApiFacade.PositionApiService.Get(employee.position_id);
-	// 	if (!positionResponse.IsSuccessStatusCode)
-	// 	{
-	// 		Snackbar.Add("Failed to load position.", Severity.Error);
-	// 		return;
-	// 	}
-	// 	position = positionResponse.Content;
-		// }
 }

@@ -54,12 +54,6 @@
 							</div>
 						</div>
 						<div class="col-md-3 col-lg-2">
-							<div class="input-group input-group-sm">
-								<span class="input-group-text">Дата</span>
-								<input type="date" class="form-control" @bind="dateFilter" @bind:format="yyyy-MM-dd">
-							</div>
-						</div>
-						<div class="col-md-3 col-lg-2">
 							<button class="btn btn-outline-secondary btn-sm w-100" @onclick="ClearFilters">
 								Очистити фільтри
 							</button>
@@ -603,7 +597,6 @@
 	private string nameFilter = "";
 	private string addressFilter = "";
 	private string phoneFilter = "";
-	private DateTime? dateFilter = null;
 	private bool showFilters = true;
 
 	// Club data
@@ -649,9 +642,7 @@
 			(string.IsNullOrWhiteSpace(addressFilter) ||
 				(c.address != null && c.address.Contains(addressFilter, StringComparison.OrdinalIgnoreCase))) &&
 			(string.IsNullOrWhiteSpace(phoneFilter) ||
-				(c.phone_number != null && c.phone_number.Contains(phoneFilter, StringComparison.OrdinalIgnoreCase))) &&
-			(!dateFilter.HasValue ||
-				(c.CreateDatetime.HasValue && c.CreateDatetime.Value.Date == dateFilter.Value.Date))
+				(c.phone_number != null && c.phone_number.Contains(phoneFilter, StringComparison.OrdinalIgnoreCase)))
 		);
 
 	private IEnumerable<Club> SortedClubs(IEnumerable<Club> clubs)
@@ -867,7 +858,6 @@
 		nameFilter = "";
 		addressFilter = "";
 		phoneFilter = "";
-		dateFilter = null;
 	}
 
 	private void ToggleDetails(Club club)

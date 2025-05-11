@@ -1,597 +1,462 @@
-﻿@using Domain.Entities
-@using Services.ExternalApi.Facade
-@using System.ComponentModel.DataAnnotations
-@using static UI.Components.Pages.SupplyOrders.SupplyOrdersList
-@using System.Text.RegularExpressions
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Постачальники - Пейнтбол</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f8f9fa;
+        }
 
-@inject IApiFacade ApiFacade
-@inject ISnackbar Snackbar
+        .sidebar {
+            width: 234px;
+            background-color: #001133;
+            color: white;
+            min-height: 100vh;
+            padding: 0;
+        }
 
-<div class="mt-3 mb-4">
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               OnClick="@(() => showAddForm = !showAddForm)"
-               StartIcon="@(showAddForm ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)">
-        @(showAddForm ? "Скасувати" : "Нове замовлення")
-    </MudButton>
-</div>
+        .brand {
+            font-size: 18px;
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-@if (showAddForm)
-{
-    <EditForm Model="@newOrder" OnValidSubmit="SaveOrder">
-        <DataAnnotationsValidator />
-        <MudCard Class="mb-4">
-            <MudCardContent>
-                <MudGrid>
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="newOrder.SupplyOrderNumber"
-                                      Label="Номер замовлення"
-                                      Variant="Variant.Outlined"
-                                      ReadOnly="true"
-                                      HelperText="Номер генерується автоматично" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudDatePicker Date="newOrder.OrderDate"
-                                       DateChanged="(date) => newOrder.OrderDate = date.GetValueOrDefault(DateTime.Today)"
-                                       Label="Дата замовлення"
-                                       Variant="Variant.Outlined"
-                                       Required="true"
-                                       HelperText="@(newOrder.OrderDate > DateTime.Today ? "Увага: Дата в майбутньому" : "")" />
-                        <ValidationMessage For="@(() => newOrder.OrderDate)" />
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        @if (!isAddingNewSupplier)
-                        {
-                            <MudSelect @bind-Value="newOrder.SupplierId"
-                                       Label="Постачальник"
-                                       Variant="Variant.Outlined"
-                                       Required="true">
-                                @foreach (var supplier in Suppliers)
-                                {
-                                    <MudSelectItem Value="@supplier.supplier_id">@supplier.name</MudSelectItem>
-                                }
-                                <MudSelectItem Value="-1">Створити постачальника</MudSelectItem>
-                            </MudSelect>
-                            <ValidationMessage For="@(() => newOrder.SupplierId)" />
-                        }
-                        else
-                        {
-                            <MudTextField @bind-Value="newSupplier.name"
-                                          Label="Назва постачальника"
-                                          Variant="Variant.Outlined"
-                                          Required="true" />
-                            <ValidationMessage For="@(() => newSupplier.name)" />
-                        }
-                    </MudItem>
-                    @if (isAddingNewSupplier)
-                    {
-                        <MudItem xs="12" md="4">
-                            <MudTextField @bind-Value="newSupplier.phone_number"
-                                          Label="Телефон"
-                                          Variant="Variant.Outlined"
-                                          Required="true" />
-                            <ValidationMessage For="@(() => newSupplier.phone_number)" />
-                        </MudItem>
-                        <MudItem xs="12" md="4">
-                            <MudTextField @bind-Value="newSupplier.email"
-                                          Label="Email"
-                                          Variant="Variant.Outlined"
-                                          Required="true" />
-                            <ValidationMessage For="@(() => newSupplier.email)" />
-                        </MudItem>
-                        <MudItem xs="12" md="8">
-                            <MudTextField @bind-Value="newSupplier.address"
-                                          Label="Адреса"
-                                          Variant="Variant.Outlined"
-                                          Required="true" />
-                            <ValidationMessage For="@(() => newSupplier.address)" />
-                        </MudItem>
-                        <MudItem xs="12" Class="d-flex justify-end">
-                            <MudButton Variant="Variant.Text"
-                                       Color="Color.Secondary"
-                                       OnClick="CancelAddSupplier">
-                                Скасувати
-                            </MudButton>
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       OnClick="SaveNewSupplier"
-                                       Class="ml-2">
-                                Зберегти постачальника
-                            </MudButton>
-                        </MudItem>
-                    }
-                    @if (!isAddingNewSupplier)
-                    {
-                        <MudItem xs="12" md="4">
-                            <MudSelect @bind-Value="selectedClubId"
-                                       Label="Клуб"
-                                       Variant="Variant.Outlined"
-                                       Required="true"
-                                       HelperText="Оберіть клуб для фільтрації працівників"
-                                       OnValueChanged="@FilterEmployeesByClub">
-                                <MudSelectItem Value="0">Всі клуби</MudSelectItem>
-                                @foreach (var club in Clubs)
-                                {
-                                    <MudSelectItem Value="@club.club_id">@club.name</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" md="4">
-                            <MudSelect @bind-Value="newOrder.EmployeeId"
-                                       Label="Відповідальний працівник"
-                                       Variant="Variant.Outlined"
-                                       Required="true"
-                                       Disabled="FilteredEmployees.Count() == 0">
-                                @foreach (var employee in FilteredEmployees)
-                                {
-                                    <MudSelectItem Value="@employee.employee_id">@employee.first_name @employee.last_name</MudSelectItem>
-                                }
-                            </MudSelect>
-                            <ValidationMessage For="@(() => newOrder.EmployeeId)" />
-                            @if (FilteredEmployees.Count() == 0)
-                            {
-                                <MudText Color="Color.Error" Typo="Typo.caption">Спочатку виберіть клуб</MudText>
-                            }
-                        </MudItem>
-                        <MudItem xs="12" md="4">
-                            <MudSelect @bind-Value="newOrder.StatusId"
-                                       Label="Статус замовлення"
-                                       Variant="Variant.Outlined"
-                                       Required="true">
-                                @foreach (var status in Statuses)
-                                {
-                                    <MudSelectItem Value="@status.status_id">@status.status_name</MudSelectItem>
-                                }
-                            </MudSelect>
-                            <ValidationMessage For="@(() => newOrder.StatusId)" />
-                        </MudItem>
-                        <MudItem xs="12" md="12">
-                            <MudTextField @bind-Value="calculatedTotalAmount"
-                                          Label="Загальна сума"
-                                          Variant="Variant.Outlined"
-                                          ReadOnly="true"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                          HelperText="Обраховується автоматично на основі товарів" />
-                        </MudItem>
-                    }
-                </MudGrid>
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
 
-                @if (!isAddingNewSupplier)
-                {
-                    <MudDivider Class="my-4" />
+            .sidebar-menu li {
+                padding: 15px 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
 
-                    <MudText Typo="Typo.h6" Class="mb-2">Обладнання у замовленні</MudText>
-
-                    @if (newOrder.SuppliedEquipmentItems.Count == 0)
-                    {
-                        <MudAlert Severity="Severity.Info" Class="my-2">Додайте хоча б один товар до замовлення</MudAlert>
-                    }
-
-                    @foreach (var item in newOrder.SuppliedEquipmentItems)
-                    {
-                        <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border: 1px solid #e0e0e0; border-radius: 4px;">
-                            <MudGrid>
-                                <MudItem xs="12" md="5">
-                                    <MudSelect @bind-Value="item.EquipmentId"
-                                               Label="Обладнання"
-                                               Variant="Variant.Outlined"
-                                               Required="true">
-                                        @foreach (var equipment in Equipments)
-                                        {
-                                            <MudSelectItem Value="@equipment.equipment_id">
-                                                @equipment.name (@GetBrandName(equipment.brand_id))
-                                            </MudSelectItem>
-                                        }
-                                    </MudSelect>
-                                </MudItem>
-                                <MudItem xs="12" md="3">
-                                    <MudTextField @bind-Value="item.Quantity"
-                                                  Label="Кількість"
-                                                  Variant="Variant.Outlined"
-                                                  Type="InputType.Number"
-                                                  Min="1"
-                                                  Required="true"
-                                                  OnBlur="CalculateTotalAmount" />
-                                </MudItem>
-                                <MudItem xs="12" md="3">
-                                    <MudTextField @bind-Value="item.Price"
-                                                  Label="Ціна"
-                                                  Variant="Variant.Outlined"
-                                                  Type="InputType.Number"
-                                                  Required="true"
-                                                  OnBlur="CalculateTotalAmount" />
-                                </MudItem>
-                                <MudItem xs="12" md="1" Class="d-flex align-center justify-center">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => RemoveEquipmentItem(item))" />
-                                </MudItem>
-                            </MudGrid>
-                        </MudPaper>
-                    }
-
-                    <MudButton Class="mt-2"
-                               Variant="Variant.Outlined"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="AddEquipmentItem">
-                        Додати обладнання
-                    </MudButton>
+                .sidebar-menu li.active {
+                    background-color: rgba(255, 255, 255, 0.1);
                 }
-            </MudCardContent>
 
-            <MudCardActions>
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           OnClick="@(() => showAddForm = false)">
-                    Скасувати
-                </MudButton>
-                @if (!isAddingNewSupplier)
-                {
-                    <MudButton ButtonType="ButtonType.Submit"
-                               Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Disabled="@(isSaving || newOrder.SuppliedEquipmentItems.Count == 0)">
-                        @if (isSaving)
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <span class="ms-2">Збереження...</span>
-                        }
-                        else
-                        {
-                            <span>Зберегти замовлення</span>
-                        }
-                    </MudButton>
-                }
-            </MudCardActions>
-        </MudCard>
-    </EditForm>
-}
-
-@code {
-    [Parameter]
-    public List<SupplyOrderStatus> Statuses { get; set; } = new();
-
-    [Parameter]
-    public List<Supplier> Suppliers { get; set; } = new();
-
-    [Parameter]
-    public List<Employee> Employees { get; set; } = new();
-
-    [Parameter]
-    public List<Equipment> Equipments { get; set; } = new();
-
-    [Parameter]
-    public List<Brand> Brands { get; set; } = new();
-
-    [Parameter]
-    public List<Club> Clubs { get; set; } = new();
-
-    [Parameter]
-    public EventCallback OnOrderCreated { get; set; }
-
-    private bool showAddForm = false;
-    private bool isSaving = false;
-    private bool isAddingNewSupplier = false;
-    private int selectedClubId = 0;
-    private decimal calculatedTotalAmount = 0;
-
-    // Модель для нового постачальника
-    private Supplier newSupplier = new()
-        {
-            name = string.Empty,
-            phone_number = string.Empty,
-            email = string.Empty,
-            address = string.Empty,
-            CreateDatetime = DateTime.Now,
-            UpdateDatetime = DateTime.Now
-        };
-
-    // Модель нового замовлення з валідаціями
-    private class SupplyOrderViewModel
-    {
-        [Required(ErrorMessage = "Номер замовлення є обов'язковим")]
-        public string SupplyOrderNumber { get; set; }
-
-        [Required(ErrorMessage = "Дата замовлення є обов'язковою")]
-        public DateTime OrderDate { get; set; }
-
-        [Required(ErrorMessage = "Постачальник є обов'язковим")]
-        [Range(1, int.MaxValue, ErrorMessage = "Постачальник є обов'язковим")]
-        public int SupplierId { get; set; }
-
-        [Required(ErrorMessage = "Відповідальний працівник є обов'язковим")]
-        [Range(1, int.MaxValue, ErrorMessage = "Відповідальний працівник є обов'язковим")]
-        public int EmployeeId { get; set; }
-
-        [Required(ErrorMessage = "Статус замовлення є обов'язковим")]
-        [Range(1, int.MaxValue, ErrorMessage = "Статус замовлення є обов'язковим")]
-        public int StatusId { get; set; }
-
-        [Required(ErrorMessage = "Загальна сума є обов'язковою")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "Загальна сума повинна бути більшою за нуль")]
-        public decimal TotalAmount { get; set; }
-
-        public List<SuppliedEquipmentViewModel> SuppliedEquipmentItems { get; set; } = new();
-    }
-
-    public class SuppliedEquipmentViewModel
-    {
-        [Required(ErrorMessage = "Обладнання є обов'язковим")]
-        [Range(1, int.MaxValue, ErrorMessage = "Обладнання є обов'язковим")]
-        public int EquipmentId { get; set; }
-
-        [Required(ErrorMessage = "Кількість є обов'язковою")]
-        [Range(1, int.MaxValue, ErrorMessage = "Кількість повинна бути більшою за нуль")]
-        public int Quantity { get; set; }
-
-        [Required(ErrorMessage = "Ціна є обов'язковою")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "Ціна повинна бути більшою за нуль")]
-        public decimal Price { get; set; }
-    }
-
-    private SupplyOrderViewModel newOrder = new()
-        {
-            OrderDate = DateTime.Today,
-            StatusId = 1, // Default to "Pending" status
-            SupplyOrderNumber = GenerateOrderNumber()
-        };
-
-    private IEnumerable<Employee> FilteredEmployees => selectedClubId == 0
-        ? Employees
-        : Employees.Where(e => e.club_id == selectedClubId);
-
-    protected override void OnInitialized()
-    {
-        newOrder.SupplyOrderNumber = GenerateOrderNumber();
-    }
-
-    private static string GenerateOrderNumber()
-    {
-        // Формат: SO-YYYYMMDD-XXXX (SO = Supply Order, поточна дата, випадковий номер)
-        return $"SO-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
-    }
-
-    private void FilterEmployeesByClub(int clubId)
-    {
-        selectedClubId = clubId;
-        // If there's only one employee after filtering, auto-select it
-        if (FilteredEmployees.Count() == 1)
-        {
-            newOrder.EmployeeId = FilteredEmployees.First().employee_id;
-        }
-        else if (FilteredEmployees.Count() == 0)
-        {
-            newOrder.EmployeeId = 0;
-            Snackbar.Add("У вибраному клубі немає працівників", MudBlazor.Severity.Warning);
-        }
-    }
-
-    private string GetBrandName(int brandId)
-    {
-        return Brands.FirstOrDefault(b => b.brand_id == brandId)?.brand_name ?? "Невідомо";
-    }
-
-    private void AddEquipmentItem()
-    {
-        if (!Equipments.Any())
-        {
-            Snackbar.Add("Немає доступного обладнання", MudBlazor.Severity.Warning);
-            return;
-        }
-
-        newOrder.SuppliedEquipmentItems.Add(new SuppliedEquipmentViewModel
-            {
-                EquipmentId = Equipments.First().equipment_id,
-                Quantity = 1,
-                Price = 0
-            });
-
-        CalculateTotalAmount();
-    }
-
-    private void RemoveEquipmentItem(SuppliedEquipmentViewModel item)
-    {
-        newOrder.SuppliedEquipmentItems.Remove(item);
-        CalculateTotalAmount();
-    }
-
-    private void CalculateTotalAmount()
-    {
-        calculatedTotalAmount = newOrder.SuppliedEquipmentItems.Sum(i => i.Price * i.Quantity);
-        newOrder.TotalAmount = calculatedTotalAmount;
-        StateHasChanged();
-    }
-
-    private void CancelAddSupplier()
-    {
-        isAddingNewSupplier = false;
-        newOrder.SupplierId = Suppliers.Any() ? Suppliers.First().supplier_id : 0;
-        newSupplier = new Supplier
-            {
-                CreateDatetime = DateTime.Now,
-                UpdateDatetime = DateTime.Now
-            };
-    }
-
-    // Використовуємо атрибути з моделі
-    private async Task SaveNewSupplier()
-    {
-        // Валідація на основі атрибутів класу Supplier
-        if (string.IsNullOrWhiteSpace(newSupplier.name))
-        {
-            Snackbar.Add("Назва постачальника є обов'язковою", MudBlazor.Severity.Warning);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(newSupplier.phone_number) ||
-            !Regex.IsMatch(newSupplier.phone_number, @"^\+?[0-9]{10,15}$"))
-        {
-            Snackbar.Add("Некоректний формат телефону", MudBlazor.Severity.Warning);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(newSupplier.email) ||
-            !Regex.IsMatch(newSupplier.email, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"))
-        {
-            Snackbar.Add("Некоректний формат email", MudBlazor.Severity.Warning);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(newSupplier.address))
-        {
-            Snackbar.Add("Адреса є обов'язковою", MudBlazor.Severity.Warning);
-            return;
-        }
-
-        try
-        {
-            var response = await ApiFacade.SuppliersApiService.Create(newSupplier);
-
-            if (!response.IsSuccessStatusCode || response.Content == null)
-            {
-                Snackbar.Add("Помилка при створенні постачальника", MudBlazor.Severity.Error);
-                return;
+            .sidebar-menu i {
+                margin-right: 10px;
             }
 
-            // Додати нового постачальника до списку
-            Suppliers.Add(response.Content);
-
-            // Встановити його як вибраного
-            newOrder.SupplierId = response.Content.supplier_id;
-
-            Snackbar.Add("Постачальника успішно створено", MudBlazor.Severity.Success);
-            isAddingNewSupplier = false;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Помилка при створенні постачальника: {ex.Message}", MudBlazor.Severity.Error);
-        }
-    }
-
-    protected override void OnParametersSet()
-    {
-        // При зміні вхідних параметрів, обчислюємо початкову суму
-        CalculateTotalAmount();
-    }
-
-    // Коли змінюється SupplierId, перевіряємо чи потрібно додати нового постачальника
-    protected override async Task OnParametersSetAsync()
-    {
-        if (newOrder.SupplierId == -1)
-        {
-            isAddingNewSupplier = true;
-            newOrder.SupplierId = 0;
-        }
-    }
-
-    private async Task SaveOrder()
-    {
-        if (newOrder.SuppliedEquipmentItems.Count == 0)
-        {
-            Snackbar.Add("Додайте хоча б один товар до замовлення", MudBlazor.Severity.Warning);
-            return;
+        .main-content {
+            flex: 1;
+            padding: 20px;
         }
 
-        // Перевірка валідності товарів
-        foreach (var item in newOrder.SuppliedEquipmentItems)
-        {
-            if (item.EquipmentId <= 0)
-            {
-                Snackbar.Add("Виберіть обладнання для всіх позицій", MudBlazor.Severity.Warning);
-                return;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ff6b81;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .user-details {
+            line-height: 1.2;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: #00b894;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #7d8da1;
+        }
+
+        .page-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .filter-container {
+            background-color: #fff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-title {
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .filter-group {
+            flex: 1;
+        }
+
+        .filter-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-export {
+            background-color: #0ea5e9;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 500;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pagination-btn {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+            .pagination-btn.active {
+                background-color: #3b82f6;
+                color: white;
+                border-color: #3b82f6;
             }
 
-            if (item.Quantity <= 0)
-            {
-                Snackbar.Add("Кількість має бути більшою за нуль", MudBlazor.Severity.Warning);
-                return;
-            }
-
-            if (item.Price <= 0)
-            {
-                Snackbar.Add("Ціна має бути більшою за нуль", MudBlazor.Severity.Warning);
-                return;
-            }
+        .action-btn {
+            padding: 5px 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
         }
 
-        // Використовуємо розраховану суму
-        newOrder.TotalAmount = calculatedTotalAmount;
-
-        isSaving = true;
-
-        try
-        {
-            // Create the supply order
-            var supplyOrder = new SupplyOrder
-                {
-                    supply_order_number = newOrder.SupplyOrderNumber,
-                    order_date = newOrder.OrderDate,
-                    supplier_id = newOrder.SupplierId,
-                    employee_id = newOrder.EmployeeId,
-                    status_id = newOrder.StatusId,
-                    total_amount = newOrder.TotalAmount,
-                    CreateDatetime = DateTime.Now,
-                    UpdateDatetime = DateTime.Now
-                };
-
-            var response = await ApiFacade.SupplyOrdersApiService.Create(supplyOrder);
-
-            if (!response.IsSuccessStatusCode || response.Content == null)
-            {
-                Snackbar.Add("Помилка при створенні замовлення", MudBlazor.Severity.Error);
-                isSaving = false;
-                return;
-            }
-
-            int orderId = response.Content.supply_order_id;
-
-            // Add equipment items
-            foreach (var item in newOrder.SuppliedEquipmentItems)
-            {
-                var suppliedEquipment = new SuppliedEquipment
-                    {
-                        supply_order_id = orderId,
-                        equipment_id = item.EquipmentId,
-                        quantity = item.Quantity,
-                        price = item.Price,
-                        CreateDatetime = DateTime.Now,
-                        UpdateDatetime = DateTime.Now
-                    };
-
-                var itemResponse = await ApiFacade.SuppliedEquipmentApiService.Create(suppliedEquipment);
-
-                if (!itemResponse.IsSuccessStatusCode)
-                {
-                    Snackbar.Add($"Помилка при додаванні обладнання до замовлення", MudBlazor.Severity.Warning);
-                }
-            }
-
-            Snackbar.Add("Замовлення успішно створено", MudBlazor.Severity.Success);
-
-            // Reset form
-            newOrder = new()
-                {
-                    OrderDate = DateTime.Today,
-                    StatusId = 1,
-                    SupplyOrderNumber = GenerateOrderNumber()
-                };
-
-            calculatedTotalAmount = 0;
-            showAddForm = false;
-
-            // Notify parent component to refresh data
-            await OnOrderCreated.InvokeAsync();
+        .edit-btn {
+            background-color: #3b82f6;
+            color: white;
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Помилка при створенні замовлення: {ex.Message}", MudBlazor.Severity.Error);
+
+        .delete-btn {
+            background-color: #ef4444;
+            color: white;
         }
-        finally
-        {
-            isSaving = false;
+
+        .save-btn {
+            background-color: #10b981;
+            color: white;
         }
-    }
-}
+
+        .cancel-btn {
+            background-color: #6b7280;
+            color: white;
+        }
+
+        .actions-cell {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">Пейнтбол</div>
+        <ul class="sidebar-menu">
+            <li>
+                <i class="fa fa-dashboard"></i> Дашборд
+            </li>
+            <li class="active">
+                <i class="fa fa-truck"></i> Постачальники
+            </li>
+            <li>
+                <i class="fa fa-cubes"></i> Обладнання
+            </li>
+            <li>
+                <i class="fa fa-shopping-cart"></i> Замовлення доставки
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div></div>
+            <div class="user-info">
+                <div class="user-avatar">ST</div>
+                <div class="user-details">
+                    <div class="user-name">Sanders Timothy</div>
+                    <div class="user-role">Office manager</div>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="page-title">Список постачальників</h1>
+
+        <div class="filter-container">
+            <div class="filter-title">Фільтри</div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">Назва</label>
+                    <input type="text" class="filter-input" placeholder="Фільтр за назвою">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Телефон</label>
+                    <input type="text" class="filter-input" placeholder="Фільтр за телефоном">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Email</label>
+                    <input type="text" class="filter-input" placeholder="Фільтр за email">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Адреса</label>
+                    <input type="text" class="filter-input" placeholder="Фільтр за адресою">
+                </div>
+            </div>
+        </div>
+
+        <div class="button-row">
+            <button class="btn btn-export">
+                <i class="fa fa-download"></i> Експорт
+            </button>
+            <button class="btn btn-primary">
+                <i class="fa fa-plus"></i> Додати постачальника
+            </button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Телефон</th>
+                    <th>Email</th>
+                    <th>Адреса</th>
+                    <th>Усього поставили обладнання</th>
+                    <th>Остання поставка</th>
+                    <th>Дії</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ArenaSupplies</td>
+                    <td>+380506360881</td>
+                    <td>5business@warzonegear.com</td>
+                    <td>Arena Road 8</td>
+                    <td>14888 шт.</td>
+                    <td>02.05.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn save-btn">Зберегти</button>
+                        <button class="action-btn cancel-btn">Скасувати</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>BattleReady</td>
+                    <td>+380505927863</td>
+                    <td>8info@techsupplies.com</td>
+                    <td>Combat Blvd 12</td>
+                    <td>18988 шт.</td>
+                    <td>05.05.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>GearForce</td>
+                    <td>+380506308022</td>
+                    <td>3wholesale@battlepacks.org</td>
+                    <td>Industrial Park 5</td>
+                    <td>11627 шт.</td>
+                    <td>09.05.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>OutdoorDepot</td>
+                    <td>+380504804735</td>
+                    <td>2orders@actiongear.com</td>
+                    <td>Depot Lane 34</td>
+                    <td>9980 шт.</td>
+                    <td>05.05.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>ProGearHub</td>
+                    <td>+380502812000</td>
+                    <td>4shop@tacticaledge.io</td>
+                    <td>Supply Street 21</td>
+                    <td>15165 шт.</td>
+                    <td>28.04.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>SportEquip</td>
+                    <td>+380502334817</td>
+                    <td>1manager@xtremekits.com</td>
+                    <td>Sport Lane 10</td>
+                    <td>10475 шт.</td>
+                    <td>19.04.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TacticalTools</td>
+                    <td>+380506458375</td>
+                    <td>7service@battlefieldpro.com</td>
+                    <td>Warehouse Ave 17</td>
+                    <td>15692 шт.</td>
+                    <td>05.05.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TechnoSupply</td>
+                    <td>+380509333985</td>
+                    <td>6hello@adventurekits.co</td>
+                    <td>Main Street 1</td>
+                    <td>11155 шт.</td>
+                    <td>25.04.2025</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit-btn">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="table-footer">
+            <div>Показано від 1 до 8 з 8 записів</div>
+            <div class="pagination">
+                <select>
+                    <option>10</option>
+                    <option>25</option>
+                    <option>50</option>
+                </select>
+                <button class="pagination-btn">Перша</button>
+                <button class="pagination-btn">Попередня</button>
+                <button class="pagination-btn active">1</button>
+                <button class="pagination-btn">Наступна</button>
+                <button class="pagination-btn">Остання</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
